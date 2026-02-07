@@ -1,0 +1,21 @@
+--- Caregiver Check ---
+Email: mekhnajoby2005@gmail.com
+Role: caregiver
+ID: 3
+Status: active
+Caregiver Level: primary
+
+--- Patient Check ---
+Email: achammakurian@gmail.com
+Role: patient
+ID: 4
+Status: active
+Primary CG Email in Profile: mekhnajoby2005@gmail.com
+
+--- Link Check ---
+Found 1 link(s).
+Link ID: 1, Is Approved: True, Created: 2026-01-26 16:14:38.057528+00:00
+
+--- All Links for this Caregiver ---
+Caregiver has 1 total link(s).
+  - Linked to Patient: achammakurian@gmail.com, Approved: True

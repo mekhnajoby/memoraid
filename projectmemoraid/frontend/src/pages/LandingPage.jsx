@@ -8,6 +8,7 @@ import './LandingPage.css';
 
 const LandingPage = () => {
     const [currentUser, setCurrentUser] = useState(null);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -22,6 +23,10 @@ const LandingPage = () => {
         window.location.reload();
     };
 
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+
     return (
         <div className="landing-container">
             <nav className="navbar">
@@ -32,8 +37,8 @@ const LandingPage = () => {
                     </div>
                     <span className="nav-caption">Supporting care and memory, step by step</span>
                 </div>
-                <div className="nav-links">
-                    <a href="#about" className="nav-link">About</a>
+                <div className={`nav-links ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
+                    <a href="#about" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>About</a>
                     {currentUser ? (
                         <>
                             <span style={{ color: 'var(--text-main)', fontWeight: '600' }}>
@@ -55,6 +60,9 @@ const LandingPage = () => {
                         </>
                     )}
                 </div>
+                <button className="mobile-menu-toggle" onClick={toggleMobileMenu} aria-label="Toggle menu">
+                    <span className={`hamburger ${isMobileMenuOpen ? 'open' : ''}`}></span>
+                </button>
             </nav>
 
 

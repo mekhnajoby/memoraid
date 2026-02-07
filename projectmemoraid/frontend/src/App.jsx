@@ -7,8 +7,21 @@ import OnboardingFlow from './pages/OnboardingFlow';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AdminDashboard from './pages/AdminDashboard';
-import CaregiverDashboard from './pages/CaregiverDashboard';
+import AdminApprovals from './pages/AdminApprovals';
+import AdminUserManagement from './pages/AdminUserManagement';
+import AdminPatientRegistry from './pages/AdminPatientRegistry';
+import AdminAlerts from './pages/AdminAlerts';
+import AdminInquiries from './pages/AdminInquiries';
+import CaregiverDashboard from './pages/caregiver/CaregiverDashboard';
+import PatientLinking from './pages/caregiver/PatientLinking';
+import MyPatients from './pages/caregiver/MyPatients';
+import GlobalAlerts from './pages/caregiver/GlobalAlerts';
+import InquiriesModule from './pages/caregiver/InquiriesModule';
+import AccountSettings from './pages/caregiver/AccountSettings';
+import PatientWorkspace from './pages/caregiver/PatientWorkspace';
 import PatientDashboard from './pages/PatientDashboard';
+import PatientRoutines from './pages/PatientRoutines';
+import useNotifications from './hooks/useNotifications';
 import { preventBackNavigation, logout, getUser } from './utils/auth';
 import './App.css';
 
@@ -31,16 +44,14 @@ const DashboardRouter = () => {
 
   switch (user.role) {
     case 'admin':
-      return <AdminDashboard />;
+      return <Navigate to="/admin-dashboard" replace />;
     case 'caregiver':
-      return <CaregiverDashboard />;
+      return <Navigate to="/caregiver-dashboard" replace />;
     case 'patient':
-      return <PatientDashboard />;
+      return <Navigate to="/patient-dashboard" replace />;
     default:
-      // If role is not recognized or user somehow gets here without a valid role
-      // It's good practice to log them out or redirect to login
       logout();
-      return <Navigate to="/login" />;
+      return <Navigate to="/login" replace />;
   }
 };
 
@@ -48,6 +59,9 @@ const DashboardRouter = () => {
 const ProtectedRoute = ({ children, requireActive = true }) => {
   const user = getUser();
   const isAuth = user && localStorage.getItem('access_token');
+
+  // Register for push notifications when authorized
+  useNotifications(user);
 
   console.log('[ProtectedRoute] path:', window.location.pathname, 'user status:', user?.status, 'isAuth:', !!isAuth);
 
@@ -93,6 +107,24 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/approvals" element={<ProtectedRoute><AdminApprovals /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute><AdminUserManagement /></ProtectedRoute>} />
+          <Route path="/admin/patients" element={<ProtectedRoute><AdminPatientRegistry /></ProtectedRoute>} />
+          <Route path="/admin/alerts" element={<ProtectedRoute><AdminAlerts /></ProtectedRoute>} />
+          <Route path="/admin/inquiries" element={<ProtectedRoute><AdminInquiries /></ProtectedRoute>} />
+
+          {/* Caregiver Routes */}
+          <Route path="/caregiver-dashboard" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
+          <Route path="/caregiver" element={<Navigate to="/caregiver-dashboard" replace />} />
+          <Route path="/caregiver/link-patient" element={<ProtectedRoute><PatientLinking /></ProtectedRoute>} />
+          <Route path="/caregiver/my-patients" element={<ProtectedRoute><MyPatients /></ProtectedRoute>} />
+          <Route path="/caregiver/alerts" element={<ProtectedRoute><GlobalAlerts /></ProtectedRoute>} />
+          <Route path="/caregiver/workspace/:patientId/*" element={<ProtectedRoute><PatientWorkspace /></ProtectedRoute>} />
+          <Route path="/caregiver/inquiries" element={<ProtectedRoute><InquiriesModule /></ProtectedRoute>} />
+          <Route path="/caregiver/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
+          <Route path="/patient-dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
+          <Route path="/patient/routines" element={<ProtectedRoute><PatientRoutines /></ProtectedRoute>} />
         </Routes>
       </div>
     </Router>

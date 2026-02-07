@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { setAuthToken, setRefreshToken, setUser, isAuthenticated } from '../utils/auth';
+import { isSpamEmail, validatePasswordLength } from '../utils/validation';
 import logo from '../assets/icons/logo.png';
 import './Auth.css';
 
@@ -43,12 +44,14 @@ const LoginPage = () => {
             errors.email = 'Email is required';
         } else if (!validateEmail(email)) {
             errors.email = 'Please enter a valid email address';
+        } else if (isSpamEmail(email)) {
+            errors.email = 'Disposable email addresses are not allowed';
         }
 
         if (!password) {
             errors.password = 'Password is required';
-        } else if (password.length < 6) {
-            errors.password = 'Password must be at least 6 characters';
+        } else if (!validatePasswordLength(password)) {
+            errors.password = 'Password must be at least 8 characters';
         }
 
         setFieldErrors(errors);

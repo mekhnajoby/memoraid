@@ -1,0 +1,6 @@
+User: mekhnajoby2005@gmail.com, Role: caregiver, Status: active
+CaregiverProfile Level: primary, Approved: False
+PatientCaregiver links: 1
+ - Patient: achammakurian@gmail.com, Level: secondary, Approved: True
+PatientProfiles listing this email: 1
+ - Patient Profile for: achammakurian@gmail.com

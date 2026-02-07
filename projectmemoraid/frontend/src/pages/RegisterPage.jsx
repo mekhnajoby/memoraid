@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { setAuthToken, setRefreshToken, setUser, isAuthenticated } from '../utils/auth';
+import { isSpamEmail } from '../utils/validation';
+import { Eye, EyeOff, Check, X } from 'lucide-react';
 import logo from '../assets/icons/logo.png';
 import './Auth.css';
 
@@ -14,6 +16,9 @@ const RegisterPage = () => {
         confirm_password: '',
         role: 'caregiver'
     });
+    const [verificationMode, setVerificationMode] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [uniqueId, setUniqueId] = useState('');
     const [error, setError] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -70,6 +75,8 @@ const RegisterPage = () => {
             errors.email = 'Email is required';
         } else if (!validateEmail(formData.email)) {
             errors.email = 'Please enter a valid email address';
+        } else if (isSpamEmail(formData.email)) {
+            errors.email = 'Disposable email addresses are not allowed';
         }
 
         if (!formData.password) {
@@ -129,40 +136,67 @@ const RegisterPage = () => {
 
         setLoading(true);
 
-        // Minor fix: set username to email if it's empty
         const dataToSubmit = { ...formData, username: formData.email };
 
         try {
             const response = await api.post('users/register/', dataToSubmit);
-
-            // After successful registration, automatically log in to get tokens
-            const loginResponse = await api.post('users/login/', {
-                email: formData.email,
-                password: formData.password
-            });
-
-            const { access, refresh, user } = loginResponse.data;
-
-            // Use auth utilities to set session
-            setAuthToken(access);
-            setRefreshToken(refresh);
-            setUser(user);
-
-            // Redirect based on user status
-            if (user.status === 'pending') {
-                // Navigate to onboarding - using window.location.href for guaranteed redirection
-                console.log('User status is pending, forcing redirection to /onboarding via window.location.href');
-                window.location.href = '/onboarding';
-            } else {
-                console.log('User status is not pending, navigating to /dashboard');
-                navigate('/dashboard');
-            }
+            setUniqueId(response.data.unique_id);
+            setVerificationMode(true);
         } catch (err) {
             if (err.response?.data) {
                 setError(err.response.data);
             } else {
                 setError({ General: 'Registration failed. Please try again.' });
             }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerify = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError({});
+
+        try {
+            // 1. Verify OTP
+            try {
+                await api.post('users/otp/verify/', {
+                    email: formData.email,
+                    code: otpCode
+                });
+            } catch (otpErr) {
+                if (otpErr.response?.data) {
+                    setError(otpErr.response.data);
+                } else {
+                    setError({ General: 'OTP verification failed. Please check the code.' });
+                }
+                setLoading(false);
+                return;
+            }
+
+            // 2. Log in after successful verification
+            try {
+                const loginResponse = await api.post('users/login/', {
+                    email: formData.email,
+                    password: formData.password
+                });
+
+                const { access, refresh, user } = loginResponse.data;
+                setAuthToken(access);
+                setRefreshToken(refresh);
+                setUser(user);
+
+                if (user.status === 'pending') {
+                    window.location.href = '/onboarding';
+                } else {
+                    navigate('/dashboard');
+                }
+            } catch (loginErr) {
+                setError({ General: 'Verification successful, but login failed. Please go to Login page.' });
+            }
+        } catch (err) {
+            setError({ General: 'An unexpected error occurred.' });
         } finally {
             setLoading(false);
         }
@@ -183,156 +217,172 @@ const RegisterPage = () => {
                         <span>Memoraid</span>
                     </div>
 
-                    <h2>Create Account</h2>
-                    <p className="auth-helper-text">
-                        Already have an account? <Link to="/login">Login now</Link>
-                    </p>
+                    {!verificationMode ? (
+                        <>
+                            <h2>Create Account</h2>
+                            <p className="auth-helper-text">
+                                Already have an account? <Link to="/login">Login now</Link>
+                            </p>
 
-                    <form onSubmit={handleRegister} className="auth-form">
-                        <div className="form-group">
-                            <label>FULL NAME</label>
-                            <input
-                                type="text"
-                                name="full_name"
-                                value={formData.full_name}
-                                onChange={handleChange}
-                                placeholder="John Doe"
-                                required
-                            />
-                            {(fieldErrors.full_name || error.full_name) && <span className="field-error">{fieldErrors.full_name || error.full_name}</span>}
-                        </div>
-
-                        <div className="form-group">
-                            <label>EMAIL ADDRESS</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="name@example.com"
-                                required
-                            />
-                            {(fieldErrors.email || error.email) && <span className="field-error">{fieldErrors.email || error.email}</span>}
-                        </div>
-
-                        <div className="row-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                            <div className="form-group">
-                                <label>PASSWORD</label>
-                                <div className="password-input-wrapper">
+                            <form onSubmit={handleRegister} className="auth-form">
+                                <div className="form-group">
+                                    <label>FULL NAME</label>
                                     <input
-                                        type={showPassword ? "text" : "password"}
-                                        name="password"
-                                        value={formData.password}
+                                        type="text"
+                                        name="full_name"
+                                        value={formData.full_name}
                                         onChange={handleChange}
-                                        placeholder="••••••••"
+                                        placeholder="John Doe"
                                         required
                                     />
-                                    <button
-                                        type="button"
-                                        className="password-toggle-btn"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        aria-label="Toggle password visibility"
-                                    >
-                                        {showPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                            </svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                    {(fieldErrors.full_name || error.full_name) && <span className="field-error">{fieldErrors.full_name || error.full_name}</span>}
                                 </div>
-                                {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
-                                {formData.password && (
-                                    <div className="password-strength">
-                                        <div className="strength-bars">
-                                            <div className={`strength-bar ${passwordStrength.level >= 1 ? `active ${passwordStrength.text.toLowerCase()}` : ''}`}></div>
-                                            <div className={`strength-bar ${passwordStrength.level >= 2 ? `active ${passwordStrength.text.toLowerCase()}` : ''}`}></div>
-                                            <div className={`strength-bar ${passwordStrength.level >= 3 ? `active ${passwordStrength.text.toLowerCase()}` : ''}`}></div>
+
+                                <div className="form-group">
+                                    <label>EMAIL ADDRESS</label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="name@example.com"
+                                        required
+                                    />
+                                    {(fieldErrors.email || error.email) && <span className="field-error">{fieldErrors.email || error.email}</span>}
+                                </div>
+
+                                <div className="row-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div className="form-group">
+                                        <label>PASSWORD</label>
+                                        <div className="password-input-wrapper">
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleChange}
+                                                placeholder="••••••••"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                className="password-toggle-btn"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                            >
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
                                         </div>
-                                        <span className={`strength-text ${passwordStrength.text.toLowerCase()}`}>
-                                            {passwordStrength.text} Password
-                                        </span>
+                                        {formData.password && (
+                                            <div className="password-strength">
+                                                <div className="strength-bars">
+                                                    <div className={`strength-bar ${passwordStrength.level >= 1 ? 'active weak' : ''}`}></div>
+                                                    <div className={`strength-bar ${passwordStrength.level >= 2 ? 'active medium' : ''}`}></div>
+                                                    <div className={`strength-bar ${passwordStrength.level >= 3 ? 'active strong' : ''}`}></div>
+                                                </div>
+                                                <span className={`strength-text ${passwordStrength.text.toLowerCase()}`}>
+                                                    Password: {passwordStrength.text}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {fieldErrors.password && <span className="field-error">{fieldErrors.password}</span>}
                                     </div>
-                                )}
+                                    <div className="form-group">
+                                        <label>CONFIRM</label>
+                                        <div className="password-input-wrapper">
+                                            <input
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                name="confirm_password"
+                                                value={formData.confirm_password}
+                                                onChange={handleChange}
+                                                placeholder="••••••••"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                className="password-toggle-btn"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
+                                        {passwordMatch !== null && formData.confirm_password && (
+                                            <div className={`password-match-indicator ${passwordMatch ? 'match' : 'no-match'}`}>
+                                                {passwordMatch ? <Check size={14} /> : <X size={14} />}
+                                                {passwordMatch ? 'Passwords match' : 'Passwords do not match'}
+                                            </div>
+                                        )}
+                                        {fieldErrors.confirm_password && <span className="field-error">{fieldErrors.confirm_password}</span>}
+                                    </div>
+                                </div>
+                                {error.non_field_errors && <div className="auth-error">{error.non_field_errors}</div>}
+
+                                <div className="form-group">
+                                    <label>SELECT YOUR ROLE</label>
+                                    <select name="role" value={formData.role} onChange={handleChange} className="auth-select">
+                                        <option value="caregiver">Caregiver</option>
+                                        <option value="patient">Patient</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" className="btn-auth" disabled={loading}>
+                                    {loading ? 'Processing...' : 'Register Now'}
+                                </button>
+                            </form>
+
+                            <p className="back-to-home">
+                                <Link to="/">← Back to Home</Link>
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h2>Verify OTP</h2>
+                            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>
+                                    Welcome to Memoraid! Your unique ID is <strong>{uniqueId}</strong>.
+                                </p>
+                                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                                    We've sent a 6-digit confirmation code to <strong>{formData.email}</strong>.
+                                </p>
                             </div>
-                            <div className="form-group">
-                                <label>CONFIRM</label>
-                                <div className="password-input-wrapper">
+
+                            <form onSubmit={handleVerify} className="auth-form">
+                                <div className="form-group">
+                                    <label>CONFIRMATION CODE</label>
                                     <input
-                                        type={showConfirmPassword ? "text" : "password"}
-                                        name="confirm_password"
-                                        value={formData.confirm_password}
-                                        onChange={handleChange}
-                                        placeholder="••••••••"
+                                        type="text"
+                                        maxLength="6"
+                                        value={otpCode}
+                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="123456"
+                                        style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem', fontWeight: '700' }}
                                         required
                                     />
-                                    <button
-                                        type="button"
-                                        className="password-toggle-btn"
-                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        aria-label="Toggle confirm password visibility"
-                                    >
-                                        {showConfirmPassword ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                                            </svg>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                    {error.code && <span className="field-error">{error.code}</span>}
+                                    {error.non_field_errors && <div className="auth-error">{error.non_field_errors}</div>}
+                                    {error.General && <div className="auth-error">{error.General}</div>}
+                                    {error.detail && <div className="auth-error">{error.detail}</div>}
                                 </div>
-                                {fieldErrors.confirm_password && <span className="field-error">{fieldErrors.confirm_password}</span>}
-                                {formData.confirm_password && passwordMatch !== null && (
-                                    <div className={`password-match-indicator ${passwordMatch ? 'match' : 'no-match'}`}>
-                                        {passwordMatch ? (
-                                            <>
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                <span>Passwords match</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                                <span>Passwords do not match</span>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        {error.non_field_errors && <div className="auth-error" style={{ marginTop: '0' }}>{error.non_field_errors}</div>}
 
-                        <div className="form-group">
-                            <label>SELECT YOUR ROLE</label>
-                            <select name="role" value={formData.role} onChange={handleChange} className="auth-select">
-                                <option value="caregiver">Caregiver</option>
-                                <option value="patient">Patient</option>
-                            </select>
-                        </div>
+                                <button type="submit" className="btn-auth" disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+                                    {loading ? 'Verifying...' : 'Verify & Continue'}
+                                </button>
+                            </form>
 
-                        <button type="submit" className="btn-auth" disabled={loading}>
-                            {loading ? 'Processing...' : 'Register Now'}
-                        </button>
-                    </form>
-
-                    <p className="back-to-home">
-                        <Link to="/">← Back to Home</Link>
-                    </p>
+                            <p className="back-to-home">
+                                <button
+                                    onClick={() => setVerificationMode(false)}
+                                    style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0 }}
+                                >
+                                    ← Back to registration
+                                </button>
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
-
 
 export default RegisterPage;

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'routines',
     'notifications',
     'logs',
+    'django_celery_beat',
 ]
 
 DATABASES = {
@@ -132,7 +133,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -143,6 +144,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
@@ -181,4 +185,53 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'resend'
 EMAIL_HOST_PASSWORD = os.getenv('RESEND_API_KEY')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Schedule - Automated Task Execution
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # Generate daily task instances at midnight
+    'generate-daily-tasks': {
+        'task': 'users.tasks.generate_daily_task_instances',
+        'schedule': crontab(hour=0, minute=0),  # Every day at 00:00
+    },
+    # Trigger persistent alerts every minute
+    'trigger-persistent-alerts': {
+        'task': 'users.tasks.trigger_persistent_alerts',
+        'schedule': crontab(minute='*'),  # Every minute
+    },
+    # Process escalations every minute
+    'process-escalations': {
+        'task': 'users.tasks.process_escalations',
+        'schedule': crontab(minute='*'),  # Every minute
+    },
+}
+
+# Firebase Cloud Messaging Configuration
+FIREBASE_CONFIG_PATH = os.path.join(BASE_DIR, 'firebase-service-account.json')
+FIREBASE_APP = None
+
+if os.path.exists(FIREBASE_CONFIG_PATH):
+    import firebase_admin
+    from firebase_admin import credentials
+    cred = credentials.Certificate(FIREBASE_CONFIG_PATH)
+    FIREBASE_APP = firebase_admin.initialize_app(cred)
+else:
+    # Fallback to env var if path doesn't exist
+    firebase_creds_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
+    if firebase_creds_json:
+        import firebase_admin
+        from firebase_admin import credentials
+        import json
+        cred_dict = json.loads(firebase_creds_json)
+        cred = credentials.Certificate(cred_dict)
+        FIREBASE_APP = firebase_admin.initialize_app(cred)
 

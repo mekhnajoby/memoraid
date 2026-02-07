@@ -125,6 +125,57 @@ body {
   text-align: center;
 }
 
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 101;
+}
+
+.hamburger {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--text-main);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: var(--text-main);
+  transition: all 0.3s ease;
+}
+
+.hamburger::before {
+  top: -8px;
+}
+
+.hamburger::after {
+  bottom: -8px;
+}
+
+.hamburger.open {
+  background: transparent;
+}
+
+.hamburger.open::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.hamburger.open::after {
+  bottom: 0;
+  transform: rotate(-45deg);
+}
+
 .motion-card {
   padding: 3rem;
   margin-bottom: 5rem;
@@ -372,9 +423,59 @@ body {
     padding: 1.5rem 1rem;
   }
 
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 280px;
+    height: 100vh;
+    background: #fff;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2rem;
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+  }
+
+  .nav-links.mobile-active {
+    right: 0;
+  }
+
+  .nav-links a,
+  .nav-links span {
+    font-size: 1.1rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .btn-login,
+  .btn-register {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .hero-title {
+    font-size: 1.75rem;
+  }
+
+  .motion-card {
+    padding: 2rem 1.5rem;
+  }
+
   .role-cards {
     flex-direction: column;
     align-items: center;
+    gap: 2rem;
+  }
+
+  .role-card {
+    width: 100%;
+    max-width: 320px;
   }
 
   .steps-container {
@@ -384,5 +485,21 @@ body {
 
   .step-arrow {
     transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 1.5rem;
+  }
+
+  .pillars-tagline {
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+
+  .about-section h2,
+  .how-it-works h2 {
+    font-size: 1.75rem;
   }
 }

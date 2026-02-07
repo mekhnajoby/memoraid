@@ -26,8 +26,13 @@ export const getAuthToken = () => {
 };
 
 export const getUser = () => {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    try {
+        const userStr = localStorage.getItem('user');
+        return userStr ? JSON.parse(userStr) : null;
+    } catch (e) {
+        console.error("Failed to parse user from storage", e);
+        return null;
+    }
 };
 
 export const isAuthenticated = () => {

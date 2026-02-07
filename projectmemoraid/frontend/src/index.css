@@ -1,8 +1,17 @@
+* {
+  box-sizing: border-box;
+}
+
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
+  /* Responsive Breakpoints */
+  --mobile: 480px;
+  --tablet: 768px;
+  --desktop: 1024px;
+  --wide: 1280px;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
