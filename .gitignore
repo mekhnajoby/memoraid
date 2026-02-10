@@ -14,3 +14,4 @@ Thumbs.db
 projectmemoraid/backend/celerybeat-schedule
 
 check_data.py
+projectmemoraid/backend/firebase-service-account.json
