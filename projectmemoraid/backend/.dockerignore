@@ -1,0 +1,12 @@
+venv
+__pycache__
+*.pyc
+.git
+node_modules
+projectmemoraid/frontend/dist
+.env
+.env.local
+*.sqlite3
+media
+build
+dist
