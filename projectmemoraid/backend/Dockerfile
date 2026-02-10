@@ -16,4 +16,4 @@ ENV PORT 8000
 
 RUN python manage.py collectstatic --noinput || true
 
-CMD ["gunicorn", "memoraid_backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD gunicorn memoraid_backend.wsgi:application --bind 0.0.0.0:$PORT --workers 3
