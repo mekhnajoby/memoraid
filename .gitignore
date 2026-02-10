@@ -9,3 +9,8 @@ projectmemoraid/backend/__pycache__/
 # ===== OS junk =====
 .DS_Store
 Thumbs.db
+
+# ===== Task Scheduler =====
+projectmemoraid/backend/celerybeat-schedule
+
+check_data.py

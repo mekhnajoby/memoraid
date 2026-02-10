@@ -311,7 +311,7 @@ const AlertHistoryItem = ({ alert }) => {
             return `${alert.routine_name} at ${displayHour}:${minutes} ${ampm}`;
         }
         // Fallback to message for legacy alerts or SOS
-        return alert.message.replace('Ack: ', '').replace('Missed Routine: ', '');
+        return alert.message.replace('Acknowledged: ', '').replace('Missed Routine: ', '');
     };
 
     const taskDetails = getTaskDetails();

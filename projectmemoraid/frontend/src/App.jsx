@@ -56,14 +56,14 @@ const DashboardRouter = () => {
 };
 
 // Protected Route Wrapper
-const ProtectedRoute = ({ children, requireActive = true }) => {
+const ProtectedRoute = ({ children, requireActive = true, allowedRoles }) => {
   const user = getUser();
   const isAuth = user && localStorage.getItem('access_token');
 
   // Register for push notifications when authorized
   useNotifications(user);
 
-  console.log('[ProtectedRoute] path:', window.location.pathname, 'user status:', user?.status, 'isAuth:', !!isAuth);
+  console.log('[ProtectedRoute] path:', window.location.pathname, 'user role:', user?.role, 'isAuth:', !!isAuth);
 
   if (!isAuth) {
     console.log('[ProtectedRoute] No auth, redirecting to /login');
@@ -73,6 +73,12 @@ const ProtectedRoute = ({ children, requireActive = true }) => {
   if (requireActive && user.status === 'pending') {
     console.log('[ProtectedRoute] User is pending, redirecting to /onboarding');
     return <Navigate to="/onboarding" />;
+  }
+
+  // Role-based access control: redirect to correct dashboard if role doesn't match
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    console.log(`[ProtectedRoute] Role "${user.role}" not in allowed roles [${allowedRoles}], redirecting to /dashboard`);
+    return <Navigate to="/dashboard" replace />;
   }
 
   console.log('[ProtectedRoute] Access granted');
@@ -107,24 +113,24 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/approvals" element={<ProtectedRoute><AdminApprovals /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute><AdminUserManagement /></ProtectedRoute>} />
-          <Route path="/admin/patients" element={<ProtectedRoute><AdminPatientRegistry /></ProtectedRoute>} />
-          <Route path="/admin/alerts" element={<ProtectedRoute><AdminAlerts /></ProtectedRoute>} />
-          <Route path="/admin/inquiries" element={<ProtectedRoute><AdminInquiries /></ProtectedRoute>} />
+          <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['admin']}><AdminApprovals /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserManagement /></ProtectedRoute>} />
+          <Route path="/admin/patients" element={<ProtectedRoute allowedRoles={['admin']}><AdminPatientRegistry /></ProtectedRoute>} />
+          <Route path="/admin/alerts" element={<ProtectedRoute allowedRoles={['admin']}><AdminAlerts /></ProtectedRoute>} />
+          <Route path="/admin/inquiries" element={<ProtectedRoute allowedRoles={['admin']}><AdminInquiries /></ProtectedRoute>} />
 
           {/* Caregiver Routes */}
-          <Route path="/caregiver-dashboard" element={<ProtectedRoute><CaregiverDashboard /></ProtectedRoute>} />
+          <Route path="/caregiver-dashboard" element={<ProtectedRoute allowedRoles={['caregiver']}><CaregiverDashboard /></ProtectedRoute>} />
           <Route path="/caregiver" element={<Navigate to="/caregiver-dashboard" replace />} />
-          <Route path="/caregiver/link-patient" element={<ProtectedRoute><PatientLinking /></ProtectedRoute>} />
-          <Route path="/caregiver/my-patients" element={<ProtectedRoute><MyPatients /></ProtectedRoute>} />
-          <Route path="/caregiver/alerts" element={<ProtectedRoute><GlobalAlerts /></ProtectedRoute>} />
-          <Route path="/caregiver/workspace/:patientId/*" element={<ProtectedRoute><PatientWorkspace /></ProtectedRoute>} />
-          <Route path="/caregiver/inquiries" element={<ProtectedRoute><InquiriesModule /></ProtectedRoute>} />
-          <Route path="/caregiver/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
-          <Route path="/patient-dashboard" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
-          <Route path="/patient/routines" element={<ProtectedRoute><PatientRoutines /></ProtectedRoute>} />
+          <Route path="/caregiver/link-patient" element={<ProtectedRoute allowedRoles={['caregiver']}><PatientLinking /></ProtectedRoute>} />
+          <Route path="/caregiver/my-patients" element={<ProtectedRoute allowedRoles={['caregiver']}><MyPatients /></ProtectedRoute>} />
+          <Route path="/caregiver/alerts" element={<ProtectedRoute allowedRoles={['caregiver']}><GlobalAlerts /></ProtectedRoute>} />
+          <Route path="/caregiver/workspace/:patientId/*" element={<ProtectedRoute allowedRoles={['caregiver']}><PatientWorkspace /></ProtectedRoute>} />
+          <Route path="/caregiver/inquiries" element={<ProtectedRoute allowedRoles={['caregiver']}><InquiriesModule /></ProtectedRoute>} />
+          <Route path="/caregiver/settings" element={<ProtectedRoute allowedRoles={['caregiver']}><AccountSettings /></ProtectedRoute>} />
+          <Route path="/patient-dashboard" element={<ProtectedRoute allowedRoles={['patient']}><PatientDashboard /></ProtectedRoute>} />
+          <Route path="/patient/routines" element={<ProtectedRoute allowedRoles={['patient']}><PatientRoutines /></ProtectedRoute>} />
         </Routes>
       </div>
     </Router>

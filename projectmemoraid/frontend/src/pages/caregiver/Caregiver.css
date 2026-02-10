@@ -485,6 +485,33 @@ textarea.form-input-styled {
     min-height: 120px;
 }
 
+/* Enhanced Date & Time Inputs */
+input[type="date"].form-input-styled,
+input[type="time"].form-input-styled {
+    position: relative;
+    padding-right: 3rem;
+    /* Space for the icon */
+}
+
+/* Make the whole input clickable to open the picker on some browsers */
+input[type="date"].form-input-styled::-webkit-calendar-picker-indicator,
+input[type="time"].form-input-styled::-webkit-calendar-picker-indicator {
+    background: transparent;
+    color: transparent;
+    cursor: pointer;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 3rem;
+}
+
+/* Hover effect for inputs */
+.form-input-styled:hover {
+    border-color: var(--cg-primary-light);
+    background-color: #f8fafc !important;
+}
+
 /* Modals */
 .modal-overlay {
     position: fixed;
@@ -1207,6 +1234,7 @@ textarea.form-input-styled {
         opacity: 0;
         transform: translateX(100px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
@@ -1271,4 +1299,3 @@ textarea.form-input-styled {
 .cg-nt-view-btn:hover {
     background: #e2e8f0;
 }
-

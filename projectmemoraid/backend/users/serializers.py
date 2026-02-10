@@ -112,20 +112,23 @@ class RoutineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Routine
         fields = [
-            'id', 'patient', 'name', 'time', 'frequency', 'days_of_week', 
+            'id', 'patient', 'name', 'time', 'frequency', 'days_of_week', 'target_date',
             'notes', 'icon', 'is_active', 'alert_interval', 
             'max_response_window', 'escalation_enabled', 'created_at'
         ]
 
 class TaskLogSerializer(serializers.ModelSerializer):
     routine_name = serializers.CharField(source='routine.name', read_only=True)
+    routine_time = serializers.TimeField(source='routine.time', read_only=True)
+    routine_icon = serializers.CharField(source='routine.icon', read_only=True)
     handled_by_name = serializers.CharField(source='handled_by.full_name', read_only=True)
     handled_by_role = serializers.CharField(source='handled_by.role', read_only=True)
     
     class Meta:
         model = TaskLog
         fields = [
-            'id', 'routine', 'routine_name', 'date', 'scheduled_datetime', 
+            'id', 'routine', 'routine_name', 'routine_time', 'routine_icon', 
+            'date', 'scheduled_datetime', 
             'status', 'handled_by', 'handled_by_name', 'handled_by_role', 
             'acknowledged_at', 'timestamp'
         ]

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     ClipboardList,
     CheckCircle,
@@ -11,6 +12,7 @@ import {
 import api from '../../services/api';
 
 const PatientOverview = ({ patient, onRefresh }) => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         pending: 0,
         completed: 0,
@@ -39,7 +41,7 @@ const PatientOverview = ({ patient, onRefresh }) => {
                     missed: pStats.missed_tasks || 0,
                     escalated: pStats.escalated_tasks || 0,
                     total: pStats.total_tasks || 0,
-                    nextTask: pStats.next_task || 'No more routines',
+                    nextTask: pStats.next_task || 'No upcoming routines|No care routines are scheduled in the upcoming time for now.',
                     nextTaskTime: pStats.next_task_time || '--:--',
                     nextTaskId: pStats.next_task_id
                 });
@@ -60,19 +62,26 @@ const PatientOverview = ({ patient, onRefresh }) => {
     const handleMarkCompleted = async () => {
         if (!stats.nextTaskId || marking) return;
 
+        // Check if user is primary caregiver
+        const isPrimary = patient.care_level?.toLowerCase().includes('primary');
+        if (!isPrimary) {
+            setError('Only primary caregivers may perform this quick-action. Please coordinate with the workspace owner.');
+            return;
+        }
+
         setMarking(true);
         try {
             await api.post('users/caregiver/logs/', {
                 routine: stats.nextTaskId,
                 status: 'completed',
-                date: new Date().toISOString().split('T')[0],
+                date: new Date().toLocaleDateString('en-CA'),
                 notes: 'Completed via Overview Quick-Action'
             });
             if (onRefresh) onRefresh();
             fetchStats();
         } catch (err) {
             console.error('Error marking task completed:', err);
-            setError('Only primary caregivers may perform this quick-action. Please coordinate with the workspace owner.');
+            setError('Failed to mark task as completed. Please try again.');
         } finally {
             setMarking(false);
         }
@@ -84,8 +93,24 @@ const PatientOverview = ({ patient, onRefresh }) => {
         }
 
         const now = new Date();
-        const timePart = stats.nextTaskTime.split(' ')[0]; // Handle cases like "08:00 (Tomorrow)" if it somehow gets through
-        const [hours, minutes] = timePart.split(':').map(Number);
+
+        // Parse time with AM/PM
+        const timeMatch = stats.nextTaskTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!timeMatch || stats.nextTaskTime === '--:--') {
+            return { bg: '#f8fafc', color: '#6366f1', label: 'Care Status', border: '#eef2ff' };
+        }
+
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const period = timeMatch[3].toUpperCase();
+
+        // Convert to 24-hour format
+        if (period === 'PM' && hours !== 12) {
+            hours += 12;
+        } else if (period === 'AM' && hours === 12) {
+            hours = 0;
+        }
+
         const taskTime = new Date();
         taskTime.setHours(hours, minutes, 0, 0);
 
@@ -95,8 +120,10 @@ const PatientOverview = ({ patient, onRefresh }) => {
             return { bg: '#fef2f2', color: '#ef4444', label: 'OVERDUE', border: '#fee2e2' };
         } else if (diffMinutes < 30) {
             return { bg: '#fffbeb', color: '#f59e0b', label: 'DUE SOON', border: '#fef3c7' };
+        } else if (diffMinutes < 120) {
+            return { bg: '#f0fdf4', color: '#10b981', label: 'Scheduled Routine', border: '#dcfce7' };
         }
-        return { bg: '#f8fafc', color: '#6366f1', label: 'Scheduled Routine', border: '#eef2ff' };
+        return { bg: '#f8fafc', color: '#6366f1', label: 'Up Next (Later Today)', border: '#eef2ff' };
     };
 
     const urgency = getUrgencyStyles();
@@ -161,29 +188,6 @@ const PatientOverview = ({ patient, onRefresh }) => {
                         </div>
                         <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>Up Next</h3>
                     </div>
-                    {stats.nextTaskId && (
-                        <button
-                            onClick={handleMarkCompleted}
-                            disabled={marking}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                background: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                padding: '0.6rem 1.2rem',
-                                borderRadius: '12px',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                opacity: marking ? 0.7 : 1,
-                                transition: 'all 0.2s'
-                            }}
-                            className="btn-complete-quick"
-                        >
-                            {marking ? 'Updating...' : <><Check size={18} /> Mark Completed</>}
-                        </button>
-                    )}
                 </div>
 
                 <div style={{
@@ -209,13 +213,43 @@ const PatientOverview = ({ patient, onRefresh }) => {
                             {stats.nextTaskTime}
                         </div>
                         <div>
-                            <h4 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>{stats.nextTask}</h4>
-                            <p style={{ color: urgency.color, margin: '0.25rem 0 0', fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                {urgency.label}
-                            </p>
+                            {stats.nextTask && stats.nextTask.includes('|') ? (
+                                <>
+                                    <h4 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+                                        {stats.nextTask.split('|')[0]}
+                                    </h4>
+                                    <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem', fontWeight: '500' }}>
+                                        {stats.nextTask.split('|')[1]}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <h4 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#1e293b', margin: 0 }}>{stats.nextTask}</h4>
+                                    <p style={{ color: urgency.color, margin: '0.25rem 0 0', fontWeight: '800', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        {urgency.label}
+                                    </p>
+                                </>
+                            )}
                         </div>
                     </div>
-                    <TrendingUp size={24} color={urgency.color} style={{ opacity: 0.6 }} />
+                    <button
+                        onClick={() => navigate('../routines')}
+                        style={{
+                            background: 'var(--cg-accent)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '12px',
+                            fontSize: '0.9rem',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        className="btn-auth"
+                    >
+                        View Details
+                    </button>
                 </div>
             </div>
 

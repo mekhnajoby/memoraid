@@ -115,6 +115,9 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
         if (!canEdit) return;
         setLoading(true);
         setMessage('');
+
+        // Ensure customMessage is a string (avoid React event objects)
+        const displayMessage = typeof customMessage === 'string' ? customMessage : 'Profile updated successfully.';
         try {
             const payload = {
                 familiar_name: profile.familiar_name,
@@ -145,7 +148,7 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
             console.log('Save response:', response.data);
             console.log('Anchors in response:', response.data?.patient_profile?.identity_anchors);
 
-            setMessage(customMessage);
+            setMessage(displayMessage);
             if (onRefresh) onRefresh();
             setTimeout(() => setMessage(''), 3000);
         } catch (err) {
@@ -168,8 +171,8 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                 </div>
                 {canEdit && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        {message && <span style={{ fontSize: '0.85rem', color: message.includes('success') ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
-                        <button className="btn-auth" style={{ width: 'auto', padding: '0.6rem 2rem' }} onClick={handleSave} disabled={loading}>
+                        {message && <span style={{ fontSize: '0.85rem', color: (typeof message === 'string' && message.includes('success')) ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
+                        <button className="btn-auth" style={{ width: 'auto', padding: '0.6rem 2rem' }} onClick={() => handleSave()} disabled={loading}>
                             <Save size={18} /> {loading ? 'Saving...' : 'Save Changes'}
                         </button>
                     </div>
@@ -362,7 +365,7 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                     </div>
                     {canEdit && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            {message && <span style={{ fontSize: '0.85rem', color: message.includes('success') ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
+                            {message && <span style={{ fontSize: '0.85rem', color: (typeof message === 'string' && message.includes('success')) ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
                             <button
                                 className="btn-auth"
                                 style={{ width: 'auto', padding: '0.6rem 1.5rem' }}
@@ -521,7 +524,7 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                     />
                     {canEdit && (
                         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
-                            {message && <span style={{ fontSize: '0.85rem', color: message.includes('success') ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
+                            {message && <span style={{ fontSize: '0.85rem', color: (typeof message === 'string' && message.includes('success')) ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
                             <button
                                 className="btn-auth"
                                 style={{ width: 'auto', padding: '0.6rem 2rem' }}

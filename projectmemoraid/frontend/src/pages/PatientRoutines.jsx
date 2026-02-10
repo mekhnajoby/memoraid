@@ -23,9 +23,9 @@ const PatientRoutines = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
             const [routinesRes, logsRes] = await Promise.all([
-                api.get('users/caregiver/routines/'), // Reusing caregiver endpoint which filters by patient in backend
+                api.get(`users/caregiver/routines/?date=${today}`),
                 api.get(`users/caregiver/logs/?date=${today}`)
             ]);
             setRoutines(routinesRes.data);
@@ -44,7 +44,7 @@ const PatientRoutines = () => {
 
     const handleCompleteTask = async (routineId) => {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
             const existingLog = logs.find(l => l.routine === routineId);
 
             if (!existingLog) {
@@ -67,18 +67,6 @@ const PatientRoutines = () => {
             ...r,
             status: log ? log.status : 'pending'
         };
-    }).filter(r => {
-        // Exclude routines created today AFTER their scheduled time
-        const now = new Date();
-        const createdDate = new Date(r.created_at);
-        const [hours, minutes] = r.time.split(':').map(Number);
-        const scheduledTimeToday = new Date();
-        scheduledTimeToday.setHours(hours, minutes, 0, 0);
-
-        if (createdDate.toDateString() === now.toDateString()) {
-            if (createdDate > scheduledTimeToday) return false;
-        }
-        return true;
     }).sort((a, b) => a.time.localeCompare(b.time));
 
     return (

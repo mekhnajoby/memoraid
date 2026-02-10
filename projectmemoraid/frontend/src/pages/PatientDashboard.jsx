@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { preventBackNavigation, logout, getUser } from '../utils/auth';
 import { CheckCircle, AlertCircle, Heart, Users, LogOut, Clock, Calendar, Bell } from 'lucide-react';
 import api from '../services/api';
@@ -9,6 +9,11 @@ import './PatientDashboard.css';
 const PatientDashboard = () => {
     const navigate = useNavigate();
     const user = getUser();
+
+    // Role guard: only patients can access this dashboard
+    if (user && user.role !== 'patient') {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const [profile, setProfile] = useState(null);
     const [network, setNetwork] = useState(null);
@@ -22,11 +27,12 @@ const PatientDashboard = () => {
 
     const fetchData = async () => {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
+            const timestamp = Date.now(); // Cache buster
             const [meRes, netRes, routinesRes, logsRes, memoriesRes] = await Promise.all([
-                api.get('users/me/'),
+                api.get(`users/me/?t=${timestamp}`),
                 api.get('users/caregiver/network/'),
-                api.get('users/caregiver/routines/'),
+                api.get(`users/caregiver/routines/?date=${today}`),
                 api.get(`users/caregiver/logs/?date=${today}`),
                 api.get('users/caregiver/memories/')
             ]);
@@ -39,19 +45,8 @@ const PatientDashboard = () => {
             const routines = routinesRes.data;
             const logs = logsRes.data;
 
-            const currentWeekday = new Date().getDay();
-            const memoraidWeekday = currentWeekday === 0 ? 6 : currentWeekday - 1;
-
-            const todaysRoutines = routines.filter(r => {
-                if (r.frequency === 'daily' || r.frequency === 'custom') return true;
-                if (r.frequency === 'weekly') {
-                    return r.days_of_week && r.days_of_week.includes(memoraidWeekday);
-                }
-                return false;
-            });
-
             // Map routines to their log status
-            const fullSchedule = todaysRoutines.map(r => {
+            const fullSchedule = routines.map(r => {
                 const log = logs.find(l => l.routine === r.id);
                 return {
                     ...r,
@@ -120,11 +115,11 @@ const PatientDashboard = () => {
             fetchData();
         }).catch(err => console.log('FCM Listener failed: ', err));
 
-        // Refresh every minute for task updates (fallback to polling)
+        // Refresh every 10 seconds for faster profile and task updates
         const interval = setInterval(() => {
             fetchData();
             setCurrentTime(new Date());
-        }, 60000);
+        }, 10000);
         return () => clearInterval(interval);
     }, []);
 
@@ -152,7 +147,7 @@ const PatientDashboard = () => {
     const handleComplete = async () => {
         if (!nextTask) return;
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
 
             if (nextTask.log_id) {
                 // Update existing log
@@ -318,7 +313,7 @@ const PatientDashboard = () => {
                             </div>
                         ) : (
                             <p className="fallback-msg">
-                                Ammachi, you're at home with Anna!
+                                You're safe and cared for, {familiarName}. Everything is okay.
                             </p>
                         )}
                     </div>
@@ -392,7 +387,7 @@ const PatientDashboard = () => {
                                     </div>
                                 ))
                             ) : (
-                                <p style={{ color: '#94a3b8', fontSize: '0.95rem', textAlign: 'center' }}>No routines scheduled for today</p>
+                                <p style={{ color: '#94a3b8', fontSize: '0.95rem', textAlign: 'center', padding: '2rem 1rem' }}>All clear for today. You're doing great!</p>
                             )}
                         </div>
                     </div>

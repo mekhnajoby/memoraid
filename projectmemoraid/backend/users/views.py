@@ -1,7 +1,8 @@
 from rest_framework import generics, status, permissions, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils import timezone
-from django.db.models import F
+from django.db.models import F, Q
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
@@ -497,28 +498,71 @@ class RoutineViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'patient':
-            return Routine.objects.filter(patient=user).order_by('time')
-            
-        patient_id = self.request.query_params.get('patient_id')
-        linked_patient_ids = PatientCaregiver.objects.filter(caregiver=user, is_approved=True).values_list('patient_id', flat=True)
+        date_param = self.request.query_params.get('date')
         
-        if patient_id:
+        # Base filter: not deleted
+        queryset = Routine.objects.filter(is_deleted=False)
+        
+        if user.role == 'patient':
+            queryset = queryset.filter(patient=user)
+        else:
+            patient_id = self.request.query_params.get('patient_id')
+            linked_patient_ids = PatientCaregiver.objects.filter(caregiver=user, is_approved=True).values_list('patient_id', flat=True)
+            
+            if patient_id:
+                try:
+                    if int(patient_id) in linked_patient_ids:
+                        queryset = queryset.filter(patient_id=patient_id)
+                    else:
+                        return Routine.objects.none()
+                except ValueError:
+                    return Routine.objects.none()
+            else:
+                queryset = queryset.filter(patient_id__in=linked_patient_ids)
+        
+        if date_param:
             try:
-                if int(patient_id) in linked_patient_ids:
-                    return Routine.objects.filter(patient_id=patient_id).order_by('time')
+                target_date = datetime.datetime.strptime(date_param, '%Y-%m-%d').date()
+                weekday = target_date.weekday()
+                
+                queryset = queryset.filter(
+                    Q(frequency='daily') |
+                    Q(frequency='custom') |
+                    Q(frequency='weekly', days_of_week__contains=weekday) |
+                    Q(frequency='once', target_date=target_date)
+                )
             except ValueError:
                 pass
-            return Routine.objects.none()
-        
-        return Routine.objects.filter(patient_id__in=linked_patient_ids).order_by('time')
+                
+        return queryset.order_by('time')
 
     def perform_create(self, serializer):
         # Ensure only primary caregiver can create routines for their linked patient
         patient_id = self.request.data.get('patient')
-        if not PatientCaregiver.objects.filter(caregiver=self.request.user, patient_id=patient_id, is_approved=True, caregiver__caregiver_profile__level='primary').exists():
-            raise permissions.PermissionDenied("Only primary caregivers can create routines.")
+        if not PatientCaregiver.objects.filter(caregiver=self.request.user, patient_id=patient_id, is_approved=True, level='primary').exists():
+            raise PermissionDenied("Only primary caregivers can create routines.")
         serializer.save()
+
+    def perform_destroy(self, instance):
+        # Ensure only primary caregiver can delete routines
+        if not PatientCaregiver.objects.filter(caregiver=self.request.user, patient=instance.patient, is_approved=True, level='primary').exists():
+            raise PermissionDenied("Only primary caregivers can delete routines.")
+        
+        # Soft delete
+        instance.is_deleted = True
+        instance.is_active = False
+        instance.save()
+
+        # Clean up any pending or missed logs for today and the future
+        # (History for past days is preserved, and completed/escalated logs for today are preserved)
+        from .models import TaskLog
+        from django.utils import timezone
+        today = timezone.now().date()
+        TaskLog.objects.filter(
+            routine=instance, 
+            date__gte=today, 
+            status__in=['pending', 'missed']
+        ).delete()
 
 class TaskLogViewSet(viewsets.ModelViewSet):
     serializer_class = users_serializers.TaskLogSerializer
@@ -530,17 +574,22 @@ class TaskLogViewSet(viewsets.ModelViewSet):
         
         # Trigger real-time escalation and alert checks when viewing today's tasks
         # This ensures the logic works even if Celery beat is not running
-        today_str = timezone.now().date().isoformat()
-        if not date_param or date_param == today_str:
-            try:
-                # Ensure today's task instances exist
-                generate_daily_task_instances()
-                # Run the escalation and reminder logic
-                process_escalations()
-                trigger_persistent_alerts()
-            except Exception as e:
-                # Log but don't break the API response
-                print(f"Background task trigger error: {e}")
+        # We use the client's date_param if provided, otherwise server today
+        check_date_str = date_param if date_param else timezone.now().date().isoformat()
+        try:
+            check_date = datetime.datetime.strptime(check_date_str, '%Y-%m-%d').date()
+            # Only trigger for reasonable dates (today or very recent)
+            if abs((check_date - timezone.now().date()).days) <= 1:
+                try:
+                    # Ensure task instances exist for the requested date
+                    generate_daily_task_instances(target_date=check_date)
+                    # Run the escalation and reminder logic (these use server time internally)
+                    process_escalations()
+                    trigger_persistent_alerts()
+                except Exception as e:
+                    print(f"Background task trigger error: {e}")
+        except ValueError:
+            pass
 
         if user.role == 'patient':
             qs = TaskLog.objects.filter(routine__patient=user)
@@ -561,6 +610,22 @@ class TaskLogViewSet(viewsets.ModelViewSet):
         
         if date_param:
             qs = qs.filter(date=date_param)
+            
+        # Exclude logs for deleted routines that aren't already completed/escalated
+        # (This prevents "ghost" tasks showing up in trackers after deletion)
+        today = timezone.now().date()
+        today_str = today.isoformat()
+        if date_param:
+            if date_param == today_str:
+                # For today: keep ghost tasks (completed/escalated) for history
+                qs = qs.exclude(routine__is_deleted=True, status__in=['pending', 'missed'])
+            elif date_param > today_str:
+                # For future: hide EVERYTHING related to deleted routines
+                qs = qs.exclude(routine__is_deleted=True)
+            # For past (date_param < today_str): show everything as historical record
+        else:
+            # Default (no date param, usually for stats): exclude pending/missed ghost tasks
+            qs = qs.exclude(routine__is_deleted=True, status__in=['pending', 'missed'])
             
         return qs.order_by('-date', 'routine__time')
 
@@ -583,7 +648,15 @@ class TaskLogViewSet(viewsets.ModelViewSet):
             ).exists()
             
             if not (is_patient or is_primary_cg):
-                 raise permissions.PermissionDenied("You do not have permission to log this routine.")
+                 # Check if they are at least a linked caregiver (primary or secondary)
+                 is_linked_cg = PatientCaregiver.objects.filter(
+                     caregiver=user, 
+                     patient=routine.patient, 
+                     is_approved=True
+                 ).exists()
+                 
+                 if not is_linked_cg:
+                     raise PermissionDenied("You do not have permission to log this routine.")
                  
             serializer.save(handled_by=user)
         except Routine.DoesNotExist:
@@ -593,21 +666,29 @@ class TaskLogViewSet(viewsets.ModelViewSet):
         user = self.request.user
         obj = self.get_object()
         
-        # Allow if user is the patient themselves OR a primary caregiver
         is_patient = (user.role == 'patient' and obj.routine.patient == user)
-        is_primary_cg = (
+        # Check if they are a primary caregiver for THIS patient
+        is_primary_cg = PatientCaregiver.objects.filter(
+            caregiver=user, 
+            patient=obj.routine.patient, 
+            is_approved=True, 
+            level='primary'
+        ).exists()
+        
+        # Allow secondary caregivers to mark tasks as completed or undo them
+        is_secondary_cg = (
             user.role == 'caregiver' and 
-            hasattr(user, 'caregiver_profile') and 
-            user.caregiver_profile.level == 'primary'
+            PatientCaregiver.objects.filter(caregiver=user, patient=obj.routine.patient, is_approved=True, level='secondary').exists()
         )
         
-        if is_patient or is_primary_cg:
-            if serializer.validated_data.get('status') == 'completed':
+        allowed_statuses = ['completed', 'pending', 'escalated']
+        if is_patient or is_primary_cg or (is_secondary_cg and serializer.validated_data.get('status') in allowed_statuses):
+            if serializer.validated_data.get('status') in ['completed', 'escalated']:
                 serializer.save(handled_by=user, acknowledged_at=timezone.now())
             else:
                 serializer.save(handled_by=user)
         else:
-            raise permissions.PermissionDenied("Only patients or primary caregivers can update task status.")
+            raise PermissionDenied("Only patients or primary caregivers can update task status (secondary caregivers can only mark as completed, undo, or acknowledge).")
 
 class AlertViewSet(viewsets.ModelViewSet):
     serializer_class = users_serializers.AlertSerializer
@@ -953,7 +1034,7 @@ class ProfilePhotoUploadView(generics.UpdateAPIView):
                 caregiver__caregiver_profile__level='primary'
             ).first()
             if not link:
-                raise permissions.PermissionDenied("Only primary caregivers can update patient photos.")
+                raise PermissionDenied("Only primary caregivers can update patient photos.")
             return link.patient
         return self.request.user
 
@@ -975,7 +1056,7 @@ class CaregiverPatientDetailView(generics.RetrieveAPIView):
         patient_id = self.kwargs.get('id')
         # Ensure caregiver is linked and approved for this patient
         if not PatientCaregiver.objects.filter(caregiver=self.request.user, patient_id=patient_id, is_approved=True).exists():
-            raise permissions.PermissionDenied("You are not authorized to view this patient's full workspace.")
+            raise PermissionDenied("You are not authorized to view this patient's full workspace.")
         return super().get_object()
 
 class CaregiverDashboardStatsView(generics.GenericAPIView):
@@ -1057,17 +1138,51 @@ class CaregiverDashboardStatsView(generics.GenericAPIView):
                 is_tomorrow = False
                 
                 if not next_log:
-                    # All done for today or none scheduled. Look for tomorrow's routines.
-                    all_routines = Routine.objects.filter(patient=patient, is_active=True).order_by('time')
-                    next_routine = all_routines.first() # Simplistic lookahead
-                    is_tomorrow = True
-                    next_task = next_routine.name if next_routine else "All Done"
+                    # All done for today or none scheduled. Look for the next occurrence.
+                    tomorrow = today + datetime.timedelta(days=1)
+                    tomorrow_weekday = tomorrow.weekday()
+                    
+                    # Search specifically for tomorrow first
+                    next_routine = Routine.objects.filter(
+                        Q(patient=patient, is_active=True, is_deleted=False) &
+                        (
+                            Q(frequency='daily') |
+                            Q(frequency='custom') |
+                            Q(frequency='weekly', days_of_week__contains=tomorrow_weekday) |
+                            Q(frequency='once', target_date=tomorrow)
+                        )
+                    ).order_by('time').first()
+
                     if next_routine:
+                        is_tomorrow = True
+                        next_task = next_routine.name
                         next_task_time = f"{next_routine.time.strftime('%I:%M %p')} (Tomorrow)"
                         next_task_id = next_routine.id
                     else:
-                        next_task_time = "--:--"
-                        next_task_id = None
+                        # If nothing tomorrow, look for the absolute next one (more than 1 day away)
+                        # Ensure we don't pick one-time tasks from the past or today (they should be in TaskLogs if relevant)
+                        abs_next = Routine.objects.filter(
+                            Q(patient=patient, is_active=True, is_deleted=False) &
+                            (
+                                Q(frequency__in=['daily', 'weekly', 'custom']) |
+                                Q(frequency='once', target_date__gt=today)
+                            )
+                        ).order_by('time').first()
+                        
+                        if abs_next:
+                            if abs_next.frequency == 'once' and abs_next.target_date:
+                                next_task = abs_next.name
+                                next_task_time = f"{abs_next.time.strftime('%I:%M %p')} ({abs_next.target_date.strftime('%b %d')})"
+                                next_task_id = abs_next.id
+                            else:
+                                # For weekly/daily that aren't tomorrow, we just say 'All caught up' for the current dashboard focus
+                                next_task = "No upcoming routines|No care routines are scheduled in the upcoming time for now."
+                                next_task_time = "--:--"
+                                next_task_id = None
+                        else:
+                            next_task = "No upcoming routines|No care routines are scheduled in the upcoming time for now."
+                            next_task_time = "--:--"
+                            next_task_id = None
                 else:
                     next_task = next_log.routine.name
                     time_str = timezone.localtime(next_log.scheduled_datetime).strftime('%I:%M %p')
@@ -1081,7 +1196,7 @@ class CaregiverDashboardStatsView(generics.GenericAPIView):
                 
                 if active_alerts > 0:
                     p_status = 'alert'
-                elif pending_tasks > 0:
+                elif missed_tasks > 0:
                     p_status = 'attention'
                 else:
                     p_status = 'normal'
@@ -1135,7 +1250,7 @@ class PatientLinkingView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         if self.request.user.role != 'caregiver':
-            raise permissions.PermissionDenied("Only caregivers can initiate patient linking.")
+            raise PermissionDenied("Only caregivers can initiate patient linking.")
         serializer.save()
 
 class CareNetworkView(generics.GenericAPIView):

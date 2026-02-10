@@ -97,6 +97,7 @@ class Routine(models.Model):
     FREQUENCY_CHOICES = (
         ('daily', 'Every Day'),
         ('weekly', 'Specific Days'),
+        ('once', 'Specific Date'),
         ('custom', 'Flexible / Custom'),
     )
     patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='routines', limit_choices_to={'role': 'patient'})
@@ -104,9 +105,11 @@ class Routine(models.Model):
     time = models.TimeField()
     frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily')
     days_of_week = models.JSONField(default=list, blank=True, help_text="List of days (0-6) for weekly routines")
+    target_date = models.DateField(null=True, blank=True, help_text="Specific date for one-time routines")
     notes = models.TextField(blank=True, null=True, help_text="Instructions or additional notes for the routine")
     icon = models.CharField(max_length=50, default='activity') # Lucide icon name
     is_active = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
     
     # Persistent Alert & Escalation Settings
     alert_interval = models.PositiveIntegerField(default=5, help_text="Interval between repeat alerts in minutes")

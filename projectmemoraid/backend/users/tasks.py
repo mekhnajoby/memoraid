@@ -49,13 +49,13 @@ def send_fcm_notification(user, title, body, data=None):
             logger.error(f"Error sending FCM notification to {user.email}: {e}")
 
 @shared_task
-def generate_daily_task_instances():
+def generate_daily_task_instances(target_date=None):
     """
-    Generates TaskLog entries for the current day for all active routines.
-    Runs daily at 00:00.
+    Generates TaskLog entries for a specific day for all active routines.
+    Defaults to today if no date provided.
     """
-    today = timezone.now().date()
-    routines = Routine.objects.filter(is_active=True)
+    date_to_process = target_date if target_date else timezone.now().date()
+    routines = Routine.objects.filter(is_active=True, is_deleted=False)
     
     created_count = 0
     for routine in routines:
@@ -64,28 +64,31 @@ def generate_daily_task_instances():
         if routine.frequency == 'daily' or routine.frequency == 'custom':
             should_create = True
         elif routine.frequency == 'weekly':
-            # 0=Monday, 6=Sunday
-            weekday = today.weekday()
+            # weekday() 0-6 (Mon-Sun)
+            weekday = date_to_process.weekday()
             if weekday in routine.days_of_week:
+                should_create = True
+        elif routine.frequency == 'once':
+            if routine.target_date == date_to_process:
                 should_create = True
         
         if should_create:
             # Construct scheduled datetime
             scheduled_time = routine.time
             scheduled_datetime = timezone.make_aware(
-                datetime.datetime.combine(today, scheduled_time)
+                datetime.datetime.combine(date_to_process, scheduled_time)
             )
             
             # Create TaskLog if not already exists
             log, created = TaskLog.objects.get_or_create(
                 routine=routine,
-                date=today,
+                date=date_to_process,
                 defaults={'scheduled_datetime': scheduled_datetime, 'status': 'pending'}
             )
             if created:
                 created_count += 1
                 
-    return f"Generated {created_count} task instances for {today}"
+    return f"Generated {created_count} task instances for {date_to_process}"
 
 @shared_task
 def trigger_persistent_alerts():

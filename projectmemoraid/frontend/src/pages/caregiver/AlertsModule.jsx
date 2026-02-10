@@ -38,7 +38,7 @@ const AlertsModule = ({ patient }) => {
     const acknowledgeAlert = async (id) => {
         try {
             const alertToAck = alerts.find(a => a.id === id);
-            const message = alertToAck ? `Ack: ${alertToAck.message}` : undefined;
+            const message = alertToAck ? `Acknowledged: ${alertToAck.message}` : undefined;
 
             await api.patch(`users/caregiver/alerts/${id}/`, {
                 status: 'handled',
@@ -250,7 +250,7 @@ const AlertHistoryItem = ({ alert }) => {
             return `${alert.routine_name} at ${displayHour}:${minutes} ${ampm}`;
         }
         // Fallback to message for legacy alerts or SOS
-        return alert.message.replace('Ack: ', '').replace('Missed Routine: ', '');
+        return alert.message.replace('Acknowledged: ', '').replace('Missed Routine: ', '');
     };
 
     const taskDetails = getTaskDetails();
