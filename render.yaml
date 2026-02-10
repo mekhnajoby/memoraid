@@ -1,5 +1,3 @@
-# render.yaml — Render Blueprint
-# https://docs.render.com/blueprint-spec
 services:
   - type: web
     name: memoraid-backend
@@ -16,15 +14,13 @@ services:
           name: memoraid-db
           property: connectionString
       - key: RESEND_API_KEY
-        sync: false          # set manually in dashboard
+        sync: false
       - key: DEFAULT_FROM_EMAIL
         value: onboarding@resend.dev
       - key: CORS_ALLOWED_ORIGINS
-        sync: false          # set to your Vercel URL after deploying frontend
-      - key: PYTHON_VERSION
-        value: "3.11.0"
+        sync: false
 
 databases:
   - name: memoraid-db
-    plan: free
     databaseName: memoraid_db
+    plan: starter
