@@ -267,8 +267,8 @@ const PatientDashboard = () => {
                 Logout
             </button>
 
-            {(notifPermission !== 'granted') && (
-                <div style={{ position: 'absolute', top: '2rem', right: '10rem', zIndex: 101 }}>
+            {notifPermission !== 'granted' && (
+                <div className="pd-notif-banner">
                     <button
                         onClick={async () => {
                             if (!("Notification" in window)) {
@@ -283,8 +283,7 @@ const PatientDashboard = () => {
                                 alert("Notifications are blocked. Please enable them in browser settings to receive routine reminders.");
                             }
                         }}
-                        className="pd-notif-trigger-btn"
-                        style={{ position: 'static' }} // Override absolute in CSS to use wrapper
+                        className="pd-notif-trigger-btn-new"
                     >
                         <Bell size={18} />
                         Enable Alerts

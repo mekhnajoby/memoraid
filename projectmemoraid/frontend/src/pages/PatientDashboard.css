@@ -36,10 +36,14 @@
     color: #1e293b;
 }
 
-.pd-notif-trigger-btn {
+.pd-notif-banner {
     position: absolute;
     top: 2rem;
-    right: 10rem;
+    right: 12rem;
+    z-index: 105;
+}
+
+.pd-notif-trigger-btn-new {
     background: #eef2ff;
     border: 1px solid #e0e7ff;
     color: #4f46e5;
@@ -52,13 +56,13 @@
     font-size: 0.9rem;
     font-weight: 700;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.05);
-    z-index: 100;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
 }
 
-.pd-notif-trigger-btn:hover {
+.pd-notif-trigger-btn-new:hover {
     background: #e0e7ff;
     transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.15);
 }
 
 .btn-sos {

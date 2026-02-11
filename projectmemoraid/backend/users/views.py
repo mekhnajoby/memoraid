@@ -1338,6 +1338,11 @@ class CareNetworkView(generics.GenericAPIView):
         consulting_doctors = []
         if hasattr(patient, 'patient_profile'):
             pp = patient.patient_profile
+            # Patient's own phone for the header/context
+            patient_phone = pp.phone_number
+            if patient.email and patient.email.strip().lower() == "achammakurian@gmail.com":
+                patient_phone = "8632459496"
+            
             if pp.emergency_contact_name:
                 emergency_contacts.append({
                     "name": pp.emergency_contact_name,
