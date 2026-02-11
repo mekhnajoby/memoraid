@@ -97,7 +97,7 @@ MIDDLEWARE = [
 # CORS – allow specific origins in production, or all in dev
 CORS_ALLOWED_ORIGINS_ENV = os.getenv('CORS_ALLOWED_ORIGINS')  # comma-separated
 if CORS_ALLOWED_ORIGINS_ENV:
-    CORS_ALLOWED_ORIGINS = [o.strip() for o in CORS_ALLOWED_ORIGINS_ENV.split(',')]
+    CORS_ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in CORS_ALLOWED_ORIGINS_ENV.split(',')]
     CORS_ALLOW_ALL_ORIGINS = False
 else:
     CORS_ALLOW_ALL_ORIGINS = True
