@@ -24,6 +24,7 @@ const PatientDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [notification, setNotification] = useState(null); // { title, body }
+    const [notifPermission, setNotifPermission] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'default');
 
     const fetchData = async () => {
         try {
@@ -266,36 +267,28 @@ const PatientDashboard = () => {
                 Logout
             </button>
 
-            <button
-                onClick={async () => {
-                    const permission = await Notification.requestPermission();
-                    if (permission === 'granted') {
-                        window.location.reload();
-                    } else {
-                        alert("Notifications are blocked in your browser settings.");
-                    }
-                }}
-                className="pd-notif-trigger-btn"
-                style={{
-                    position: 'absolute',
-                    top: '1.5rem',
-                    right: '10rem',
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    padding: '0.6rem 1rem',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.6rem',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600'
-                }}
-            >
-                <Bell size={18} />
-                Enable Alerts
-            </button>
+            {notifPermission !== 'granted' && (
+                <button
+                    onClick={async () => {
+                        if (!("Notification" in window)) {
+                            alert("This browser does not support desktop notifications");
+                            return;
+                        }
+                        const permission = await Notification.requestPermission();
+                        setNotifPermission(permission);
+                        if (permission === 'granted') {
+                            // Reload to initialize FCM if not already done
+                            window.location.reload();
+                        } else if (permission === 'denied') {
+                            alert("Notifications are blocked in your browser settings. Please enable them to receive routine reminders.");
+                        }
+                    }}
+                    className="pd-notif-trigger-btn"
+                >
+                    <Bell size={18} />
+                    Enable Alerts
+                </button>
+            )}
 
             {/* Main Content Area */}
             <div className="patient-content-column">
