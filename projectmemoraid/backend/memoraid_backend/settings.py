@@ -60,38 +60,24 @@ INSTALLED_APPS = [
     'django_celery_beat',
 ]
 
-# Support a single DATABASE_URL env var (e.g. provided by Render) using
-# dj-database-url. Falls back to individual DB_* env vars for local dev.
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    try:
-        import dj_database_url
+# Database Configuration
+# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-        DATABASES = {
-            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
-        }
-    except Exception:
-        # If dj_database_url isn't available locally, fall back to manual settings
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.mysql',
-                'NAME': os.getenv('DB_NAME', 'memoraid_db'),
-                'USER': os.getenv('DB_USER', 'root'),
-                'PASSWORD': os.getenv('DB_PASSWORD', 'root123'),
-                'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-                'PORT': os.getenv('DB_PORT', '3306'),
-            }
-        }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DB_NAME', 'memoraid_db'),
-            'USER': os.getenv('DB_USER', 'root'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'root123'),
-            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-            'PORT': os.getenv('DB_PORT', '3306'),
-        }
+import dj_database_url
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL') if os.getenv('DATABASE_URL') else f"mysql://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', 'root123')}@{os.getenv('DB_HOST', '127.0.0.1')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'memoraid_db')}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
+
+# Ensure PostgreSQL engine is used for postgres URLs (dj_database_url handles this normally)
+# but we can force some SSL settings if needed for Render/Neon.
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.postgresql':
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
     }
 
 
