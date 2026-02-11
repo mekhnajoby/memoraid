@@ -425,9 +425,9 @@ class PatientLinkingSerializer(serializers.Serializer):
                 status='pending'
             )
 
-            # Create Patient Profile
+            # Create or Update Patient Profile
             from datetime import date
-            PatientProfile.objects.get_or_create(
+            PatientProfile.objects.update_or_create(
                 user=patient_user,
                 defaults={
                     'phone_number': validated_data.get('phone_number'),

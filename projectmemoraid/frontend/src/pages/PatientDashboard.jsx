@@ -267,27 +267,29 @@ const PatientDashboard = () => {
                 Logout
             </button>
 
-            {notifPermission !== 'granted' && (
-                <button
-                    onClick={async () => {
-                        if (!("Notification" in window)) {
-                            alert("This browser does not support desktop notifications");
-                            return;
-                        }
-                        const permission = await Notification.requestPermission();
-                        setNotifPermission(permission);
-                        if (permission === 'granted') {
-                            // Reload to initialize FCM if not already done
-                            window.location.reload();
-                        } else if (permission === 'denied') {
-                            alert("Notifications are blocked in your browser settings. Please enable them to receive routine reminders.");
-                        }
-                    }}
-                    className="pd-notif-trigger-btn"
-                >
-                    <Bell size={18} />
-                    Enable Alerts
-                </button>
+            {(notifPermission !== 'granted') && (
+                <div style={{ position: 'absolute', top: '2rem', right: '10rem', zIndex: 101 }}>
+                    <button
+                        onClick={async () => {
+                            if (!("Notification" in window)) {
+                                alert("This browser does not support desktop notifications");
+                                return;
+                            }
+                            const permission = await Notification.requestPermission();
+                            setNotifPermission(permission);
+                            if (permission === 'granted') {
+                                window.location.reload();
+                            } else if (permission === 'denied') {
+                                alert("Notifications are blocked. Please enable them in browser settings to receive routine reminders.");
+                            }
+                        }}
+                        className="pd-notif-trigger-btn"
+                        style={{ position: 'static' }} // Override absolute in CSS to use wrapper
+                    >
+                        <Bell size={18} />
+                        Enable Alerts
+                    </button>
+                </div>
             )}
 
             {/* Main Content Area */}
