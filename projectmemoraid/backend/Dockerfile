@@ -16,4 +16,8 @@ ENV PORT 8000
 
 RUN python manage.py collectstatic --noinput || true
 
-CMD gunicorn memoraid_backend.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+# Make entrypoint.sh executable
+RUN chmod +x entrypoint.sh
+
+# Use entrypoint.sh to run migrations and start the server
+CMD ["./entrypoint.sh"]
