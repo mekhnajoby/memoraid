@@ -10,7 +10,7 @@ from .views import (
     CareNetworkView, CareTeamManagementView,
     CaregiverPatientDetailView, ProfilePhotoUploadView,
     PatientLinkingView, ChangePasswordView, PatientMemoryViewSet,
-    FCMTokenRegisterView, ActivityTimelineView
+    FCMTokenRegisterView, ActivityTimelineView, PingView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
