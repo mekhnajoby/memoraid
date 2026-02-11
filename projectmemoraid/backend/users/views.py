@@ -48,12 +48,19 @@ class VerifyOTPView(generics.GenericAPIView):
 
 class LoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200:
-            user = User.objects.get(email=request.data['email'])
-            serializer = users_serializers.UserSerializer(user)
-            response.data['user'] = serializer.data
-        return response
+        email = request.data.get('email')
+        print(f"DEBUG: Login attempt for email: {email}")
+        try:
+            response = super().post(request, *args, **kwargs)
+            if response.status_code == 200:
+                user = User.objects.get(email=email)
+                serializer = users_serializers.UserSerializer(user)
+                response.data['user'] = serializer.data
+                print(f"DEBUG: Login successful for {email}")
+            return response
+        except Exception as e:
+            print(f"DEBUG: Login exception for {email}: {str(e)}")
+            return Response({"detail": "An internal error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class OnboardingView(generics.UpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)

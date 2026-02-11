@@ -10,31 +10,35 @@ class Command(BaseCommand):
         email = 'admin@memoraid.com'
         password = 'Memoraid@2026'
         
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                'username': 'admin',
-                'full_name': 'System Admin',
-                'role': 'admin',
-                'status': 'active',
-                'is_staff': True,
-                'is_superuser': True,
-                'is_active': True,
-                'is_email_verified': True
-            }
-        )
+        # Helper to create/update admin
+        def setup_admin(email_addr, pwd, uname, fname):
+            user, created = User.objects.get_or_create(
+                email=email_addr,
+                defaults={
+                    'username': uname,
+                    'full_name': fname,
+                    'role': 'admin',
+                    'status': 'active',
+                    'is_staff': True,
+                    'is_superuser': True,
+                    'is_active': True,
+                    'is_email_verified': True
+                }
+            )
+            user.set_password(pwd)
+            user.is_staff = True
+            user.is_superuser = True
+            user.is_active = True
+            user.is_email_verified = True
+            user.status = 'active'
+            user.role = 'admin'
+            user.save()
+            return created
+
+        c1 = setup_admin(email, password, 'admin', 'System Admin')
+        c2 = setup_admin('testadmin@memoraid.com', 'admin123', 'testadmin', 'Test Admin')
         
-        # Ensure credentials and flags are correct regardless of whether user was created or found
-        user.set_password(password)
-        user.is_staff = True
-        user.is_superuser = True
-        user.is_active = True
-        user.is_email_verified = True
-        user.status = 'active'
-        user.role = 'admin'
-        user.save()
-        
-        if created:
-            self.stdout.write(self.style.SUCCESS(f'Successfully created admin {email}'))
+        if c1 or c2:
+            self.stdout.write(self.style.SUCCESS(f'Successfully initialized admin users'))
         else:
-            self.stdout.write(self.style.SUCCESS(f'Successfully updated admin {email}'))
+            self.stdout.write(self.style.SUCCESS(f'Successfully updated admin users'))
