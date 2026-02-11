@@ -100,7 +100,14 @@ if CORS_ALLOWED_ORIGINS_ENV:
     CORS_ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in CORS_ALLOWED_ORIGINS_ENV.split(',')]
     CORS_ALLOW_ALL_ORIGINS = False
 else:
+    # Default to True for now to ensure connectivity during deployment setup
     CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+# Allow Vercel subdomains more easily if environment is set
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https:\/\/.*\.vercel\.app$",
+]
 ROOT_URLCONF = 'memoraid_backend.urls'
 
 TEMPLATES = [
