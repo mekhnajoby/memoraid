@@ -1487,6 +1487,6 @@ class PingView(generics.GenericAPIView):
         from django.utils import timezone
         return Response({
             "status": "healthy",
-            "version": "v2.2-debug",
+            "version": "v2.3-live-safeguard",
             "timestamp": timezone.now().isoformat()
         })
