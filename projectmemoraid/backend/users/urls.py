@@ -52,6 +52,7 @@ urlpatterns = [
     path('caregiver/activity/', ActivityTimelineView.as_view(), name='activity_timeline'),
     path('profile/photo/', ProfilePhotoUploadView.as_view(), name='profile_photo_upload'),
     path('fcm-token/', FCMTokenRegisterView.as_view(), name='fcm_token_register'),
+    path('ping/', PingView.as_view(), name='ping'),
 ]
 
 

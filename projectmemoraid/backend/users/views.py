@@ -1485,3 +1485,13 @@ class ActivityTimelineView(generics.GenericAPIView):
         timeline.sort(key=lambda x: x['timestamp'], reverse=True)
         
         return Response(timeline)
+
+class PingView(generics.GenericAPIView):
+    permission_classes = (permissions.AllowAny,)
+    def get(self, request):
+        from django.utils import timezone
+        return Response({
+            "status": "healthy",
+            "version": "v2.2-debug",
+            "timestamp": timezone.now().isoformat()
+        })
