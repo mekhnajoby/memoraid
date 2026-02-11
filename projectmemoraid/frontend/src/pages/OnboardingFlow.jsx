@@ -28,6 +28,7 @@ const OnboardingFlow = () => {
     // Patient form state
     const [patientData, setPatientData] = useState({
         dob: '',
+        phone_number: '',
         condition: 'alzheimers',
         stage: 'mild',
         familiar_name: '',
@@ -326,6 +327,17 @@ const OnboardingFlow = () => {
                                             type="date"
                                             value={patientData.dob}
                                             onChange={(e) => setPatientData({ ...patientData, dob: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>PHONE NUMBER</label>
+                                        <input
+                                            type="tel"
+                                            value={patientData.phone_number}
+                                            onChange={(e) => setPatientData({ ...patientData, phone_number: e.target.value })}
+                                            placeholder="e.g. +1 234 567 890"
                                             required
                                         />
                                     </div>

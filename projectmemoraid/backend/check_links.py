@@ -4,9 +4,12 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'memoraid_backend.settings')
 django.setup()
 
-from users.models import PatientCaregiver
+from users.models import User, PatientCaregiver
 
-count = PatientCaregiver.objects.count()
-pending = PatientCaregiver.objects.filter(is_approved=False).count()
-print(f'Total links currently in DB: {count}')
-print(f'Pending links currently in DB: {pending}')
+print("--- User List ---")
+for user in User.objects.all():
+    print(f"ID: {user.id}, Email: {user.email}, Role: {user.role}, Status: {user.status}")
+
+print("\n--- PatientCaregiver Links ---")
+for link in PatientCaregiver.objects.all():
+    print(f"ID: {link.id}, Patient: {link.patient.email}, Caregiver: {link.caregiver.email}, Approved: {link.is_approved}, Level: {link.level}")

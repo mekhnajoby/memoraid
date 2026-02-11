@@ -1,0 +1,32 @@
+# Environment files
+.env
+*.env
+backend/.env
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+backend/venv/
+backend/db.sqlite3
+
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Logs
+*.log
+backend/*.log
+frontend/*.log
+server_log.txt
+frontend_log.txt
+push_debug.txt
+git_pull_log.txt
+
+# OS
+.DS_Store
+Thumbs.db

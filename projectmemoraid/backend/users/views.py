@@ -1122,7 +1122,7 @@ class CaregiverDashboardStatsView(generics.GenericAPIView):
             next_task_id = None
             
             if not link.is_approved:
-                p_status = 'pending'
+                p_status = link.approval_status # 'pending' or 'rejected'
             else:
                 # Trigger background tasks to ensure stats are fresh
                 try:
@@ -1253,7 +1253,9 @@ class CaregiverDashboardStatsView(generics.GenericAPIView):
                 "relationship": link.relationship,
                 "care_basis": link.care_context,
                 "consent_basis": link.consent_basis,
-                "requested_at": link.created_at
+                "requested_at": link.created_at,
+                "approval_status": link.approval_status,
+                "phone": patient.patient_profile.phone_number if hasattr(patient, 'patient_profile') else "—"
             })
 
             # p_status is already set based on active_alerts and pending_tasks above

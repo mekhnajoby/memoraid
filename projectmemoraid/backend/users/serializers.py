@@ -215,7 +215,9 @@ class UserSerializer(serializers.ModelSerializer):
                     "role": "Patient",
                     "status": patient.status,
                     "is_approved": link.is_approved,
-                    "primary_caregiver_name": primary_name
+                    "primary_caregiver_name": primary_name,
+                    "phone": patient.patient_profile.phone_number if hasattr(patient, 'patient_profile') else "—",
+                    "address": patient.patient_profile.address if hasattr(patient, 'patient_profile') else "—"
                 })
             return result
         elif obj.role == 'patient':
