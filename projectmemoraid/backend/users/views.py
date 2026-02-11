@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from . import serializers as users_serializers
 from .models import CaregiverProfile, PatientProfile, PatientCaregiver, Inquiry, Routine, TaskLog, Alert, PatientMemory, FCMToken
@@ -46,21 +47,45 @@ class VerifyOTPView(generics.GenericAPIView):
             return Response({"message": "Email verified successfully!"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields[self.username_field] = serializers.EmailField()
+
+    def validate(self, attrs):
+        # Allow both 'email' and 'username' keys in input
+        if 'email' in self.initial_data and self.username_field not in attrs:
+            attrs[self.username_field] = self.initial_data['email']
+        return super().validate(attrs)
+
 class LoginView(TokenObtainPairView):
+    serializer_class = EmailTokenObtainPairSerializer
+
     def post(self, request, *args, **kwargs):
         email = request.data.get('email')
-        print(f"DEBUG: Login attempt for email: {email}")
+        print(f"DEBUG: Login request received for: {email}")
         try:
+            # Check if user exists before attempting login
+            try:
+                user = User.objects.get(email=email)
+                print(f"DEBUG: User {email} found. Active: {user.is_active}, Verified: {user.is_email_verified}, Role: {user.role}")
+            except User.DoesNotExist:
+                print(f"DEBUG: User {email} NOT found in database.")
+                return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
             response = super().post(request, *args, **kwargs)
             if response.status_code == 200:
-                user = User.objects.get(email=email)
                 serializer = users_serializers.UserSerializer(user)
                 response.data['user'] = serializer.data
                 print(f"DEBUG: Login successful for {email}")
+            else:
+                print(f"DEBUG: Login failed for {email} with status {response.status_code}. Response: {response.data}")
             return response
         except Exception as e:
+            import traceback
             print(f"DEBUG: Login exception for {email}: {str(e)}")
-            return Response({"detail": "An internal error occurred"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            traceback.print_exc()
+            return Response({"detail": f"Server error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class OnboardingView(generics.UpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
