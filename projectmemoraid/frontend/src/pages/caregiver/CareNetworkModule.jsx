@@ -299,6 +299,27 @@ const CareNetworkModule = ({ patient, onRefresh }) => {
                         <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.4rem', fontWeight: '800' }}>Consulting Physicians</h4>
                         <p style={{ margin: '0.25rem 0 0', fontSize: '1rem', color: '#64748b' }}>Primary medical oversight.</p>
                     </div>
+                    {canEdit && (
+                        <button
+                            onClick={() => {
+                                setNewContact({ name: '', phone: '', relation: 'Doctor', customRelation: '', notes: '', hospital: '' });
+                                setIsEditingContact(false);
+                                setShowContactModal(true);
+                            }}
+                            className="btn-auth"
+                            style={{
+                                width: 'auto',
+                                padding: '0.8rem 1.75rem',
+                                borderRadius: '14px',
+                                fontSize: '1rem',
+                                background: '#f0f9ff',
+                                color: '#0369a1',
+                                border: '1.5px solid #bae6fd'
+                            }}
+                        >
+                            <Shield size={18} style={{ marginRight: '0.6rem' }} /> Add Consulting Physician
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
@@ -339,6 +360,12 @@ const CareNetworkModule = ({ patient, onRefresh }) => {
                                             </span>
                                         )}
                                     </div>
+                                    {doc.notes && (
+                                        <div style={{ marginTop: '1.25rem', padding: '1.25rem', background: '#ffffff', borderRadius: '16px', border: '1px solid #e0f2fe' }}>
+                                            <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.5rem' }}>Clinical Notes & Instructions</span>
+                                            <p style={{ margin: 0, color: '#0369a1', fontSize: '0.95rem', fontStyle: 'italic', lineHeight: '1.5' }}>"{doc.notes}"</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))

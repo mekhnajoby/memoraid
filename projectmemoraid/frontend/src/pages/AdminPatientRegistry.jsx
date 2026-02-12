@@ -243,6 +243,12 @@ const AdminPatientRegistry = () => {
                                                 <div><span style={{ color: '#64748b' }}>Name:</span> <strong>{selectedPatient.patient_profile?.consulting_doctor || '—'}</strong></div>
                                                 <div><span style={{ color: '#64748b' }}>Hospital:</span> <strong>{selectedPatient.patient_profile?.consulting_doctor_hospital || '—'}</strong></div>
                                                 <div><span style={{ color: '#64748b' }}>Contact:</span> <strong>{selectedPatient.patient_profile?.consulting_doctor_contact || '—'}</strong></div>
+                                                {selectedPatient.patient_profile?.consulting_doctor_notes && (
+                                                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #bae6fd', fontSize: '0.9rem', color: '#0369a1' }}>
+                                                        <span style={{ fontWeight: '800', display: 'block', marginBottom: '0.25rem', textTransform: 'uppercase', fontSize: '0.75rem' }}>Clinical Notes:</span>
+                                                        <p style={{ margin: 0, fontStyle: 'italic', lineHeight: '1.4' }}>"{selectedPatient.patient_profile.consulting_doctor_notes}"</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

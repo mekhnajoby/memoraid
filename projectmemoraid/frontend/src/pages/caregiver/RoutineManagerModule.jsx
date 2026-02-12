@@ -115,21 +115,22 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
     const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
     const [error, setError] = useState(null);
     const [dataVersion, setDataVersion] = useState(0); // Tracks data mutations for calendar refresh
+    const [viewDate, setViewDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Permission Check: Only Primary Caregivers can edit definitions
     const canEdit = patient.care_level?.toLowerCase().includes('primary');
 
     useEffect(() => {
         fetchData();
-    }, [patient.id]);
+    }, [patient.id, viewDate]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const today = new Date().toLocaleDateString('en-CA');
+            // Fetch routines and logs ONLY for the selected viewDate
             const [routinesRes, logsRes] = await Promise.all([
-                api.get(`users/caregiver/routines/?patient_id=${patient.id}`),
-                api.get(`users/caregiver/logs/?patient_id=${patient.id}&date=${today}`)
+                api.get(`users/caregiver/routines/?patient_id=${patient.id}&date=${viewDate}`),
+                api.get(`users/caregiver/logs/?patient_id=${patient.id}&date=${viewDate}`)
             ]);
             setRoutines(routinesRes.data);
             setLogs(logsRes.data);
@@ -215,7 +216,6 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
 
     const handleToggleTask = async (routineId, currentStatus) => {
         try {
-            const today = new Date().toLocaleDateString('en-CA');
             const existingLog = logs.find(l => l.routine === routineId);
 
             if (existingLog) {
@@ -224,10 +224,10 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
                     status: currentStatus === 'completed' ? 'pending' : 'completed'
                 });
             } else {
-                // Create new log
+                // Create new log using viewDate
                 await api.post('users/caregiver/logs/', {
                     routine: routineId,
-                    date: today,
+                    date: viewDate,
                     status: 'completed'
                 });
             }
@@ -290,8 +290,7 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
             if (r.frequency === 'weekly') {
                 if (!r.days_of_week || !r.days_of_week.includes(memoraidWeekday)) return false;
             } else if (r.frequency === 'once') {
-                const todayStr = now.toLocaleDateString('en-CA');
-                if (r.target_date !== todayStr) return false;
+                if (r.target_date !== viewDate) return false;
             }
 
             // Exclude routines created today AFTER their scheduled time
@@ -311,56 +310,102 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
 
     return (
         <div className="admin-module-container" style={{ marginTop: 0 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' }}>
                 <div style={{ display: 'flex', gap: '3rem' }}>
                     <div
                         onClick={() => setView('tasks')}
                         style={{
                             cursor: 'pointer',
-                            paddingBottom: '0.75rem',
+                            padding: '1rem 0',
                             borderBottom: view === 'tasks' ? '4px solid var(--cg-accent)' : '4px solid transparent',
                             color: view === 'tasks' ? '#0f172a' : '#94a3b8',
                             fontWeight: '800',
-                            fontSize: '1.1rem',
-                            transition: 'all 0.2s'
+                            fontSize: '1.05rem',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center'
                         }}
                     >
-                        Today's Care Tracker
+                        Daily Execution
                     </div>
                     <div
                         onClick={() => setView('routines')}
                         style={{
                             cursor: 'pointer',
-                            paddingBottom: '0.75rem',
+                            padding: '1rem 0',
                             borderBottom: view === 'routines' ? '4px solid var(--cg-accent)' : '4px solid transparent',
                             color: view === 'routines' ? '#0f172a' : '#94a3b8',
                             fontWeight: '800',
-                            fontSize: '1.1rem',
-                            transition: 'all 0.2s'
+                            fontSize: '1.05rem',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center'
                         }}
                     >
-                        Routine Builder
+                        Master Care Plan
                     </div>
                     <div
                         onClick={() => setView('calendar')}
                         style={{
                             cursor: 'pointer',
-                            paddingBottom: '0.75rem',
+                            padding: '1rem 0',
                             borderBottom: view === 'calendar' ? '4px solid var(--cg-accent)' : '4px solid transparent',
                             color: view === 'calendar' ? '#0f172a' : '#94a3b8',
                             fontWeight: '800',
-                            fontSize: '1.1rem',
-                            transition: 'all 0.2s'
+                            fontSize: '1.05rem',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center'
                         }}
                     >
-                        Routine Calendar
+                        Full History
                     </div>
                 </div>
-                {view === 'routines' && canEdit && (
-                    <button className="btn-auth" style={{ width: 'auto', padding: '0.8rem 2.5rem', borderRadius: '14px', fontSize: '1rem' }} onClick={() => setShowAddModal(true)}>
-                        <Plus size={20} /> Create New Plan
-                    </button>
-                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    {view === 'routines' && canEdit && (
+                        <button className="btn-auth" style={{ width: 'auto', padding: '0.6rem 1.5rem', borderRadius: '14px', fontSize: '0.95rem', height: '48px', display: 'flex', alignItems: 'center', gap: '0.6rem', boxSizing: 'border-box' }} onClick={() => setShowAddModal(true)}>
+                            <Plus size={18} /> Create New Plan
+                        </button>
+                    )}
+
+                    {(view === 'tasks' || view === 'routines') && (
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => setView('show_picker')}
+                                className="btn-auth"
+                                style={{
+                                    width: 'auto',
+                                    padding: '0.8rem 1.5rem',
+                                    borderRadius: '14px',
+                                    fontSize: '0.95rem',
+                                    background: '#fff',
+                                    color: '#475569',
+                                    border: '1.5px solid #e2e8f0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.6rem',
+                                    height: '48px',
+                                    boxSizing: 'border-box'
+                                }}
+                            >
+                                <Calendar size={18} color="var(--cg-accent)" />
+                                {new Date(viewDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </button>
+                            {view === 'show_picker' && (
+                                <div style={{ position: 'absolute', right: 0, top: '110%', zIndex: 100, width: '300px' }}>
+                                    <CalendarPicker
+                                        selectedDate={viewDate}
+                                        onDateChange={(date) => {
+                                            setViewDate(date);
+                                            setView('tasks'); // Return to tasks view after selection
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {loading ? (
