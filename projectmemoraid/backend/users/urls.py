@@ -10,6 +10,7 @@ from .views import (
     CareNetworkView, CareTeamManagementView,
     CaregiverPatientDetailView, ProfilePhotoUploadView,
     PatientLinkingView, ChangePasswordView, PatientMemoryViewSet,
+    CancelPatientLinkView,
     FCMTokenRegisterView, ActivityTimelineView, PingView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -46,6 +47,7 @@ urlpatterns = [
     # Caregiver Workspace
     path('caregiver/stats/', CaregiverDashboardStatsView.as_view(), name='caregiver_stats'),
     path('caregiver/link-patient/', PatientLinkingView.as_view(), name='link_patient'),
+    path('caregiver/link-patient/<int:pk>/cancel/', CancelPatientLinkView.as_view(), name='cancel_link_patient'),
     path('caregiver/network/', CareNetworkView.as_view(), name='care_network'),
     path('caregiver/network/manage/', CareTeamManagementView.as_view(), name='manage_care_network'),
     path('caregiver/patient/<int:id>/', CaregiverPatientDetailView.as_view(), name='caregiver_patient_detail'),

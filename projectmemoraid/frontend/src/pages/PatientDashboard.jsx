@@ -98,6 +98,7 @@ const PatientDashboard = () => {
     };
 
     useEffect(() => {
+        console.log('Current notification permission:', notifPermission);
         preventBackNavigation();
         fetchData();
         setupFCM();
@@ -257,22 +258,24 @@ const PatientDashboard = () => {
 
     return (
         <div className="patient-dashboard">
-            <button className="btn-sos" onClick={handleSOS} disabled={sosSending}>
-                <AlertCircle size={24} />
-                {sosSending ? 'Sending...' : 'I NEED HELP'}
-            </button>
+            <div className="patient-dashboard-header">
+                <div className="pd-header-left">
+                    <button className="btn-sos" onClick={handleSOS} disabled={sosSending}>
+                        <AlertCircle size={24} />
+                        {sosSending ? 'Sending...' : 'I NEED HELP'}
+                    </button>
+                </div>
 
-            <button className="btn-logout-patient" onClick={handleLogout}>
-                <LogOut size={20} />
-                Logout
-            </button>
-
-            {notifPermission !== 'granted' && (
-                <div className="pd-notif-banner">
+                <div className="pd-header-right">
                     <button
+                        className={`btn-notif-pill ${notifPermission === 'granted' ? 'granted' : ''}`}
                         onClick={async () => {
                             if (!("Notification" in window)) {
                                 alert("This browser does not support desktop notifications");
+                                return;
+                            }
+                            if (notifPermission === 'granted') {
+                                alert("Notifications are already enabled!");
                                 return;
                             }
                             const permission = await Notification.requestPermission();
@@ -280,16 +283,21 @@ const PatientDashboard = () => {
                             if (permission === 'granted') {
                                 window.location.reload();
                             } else if (permission === 'denied') {
-                                alert("Notifications are blocked. Please enable them in browser settings to receive routine reminders.");
+                                alert("Notifications are blocked in browser settings.");
                             }
                         }}
-                        className="pd-notif-trigger-btn-new"
                     >
                         <Bell size={18} />
-                        Enable Alerts
+                        <span>{notifPermission === 'granted' ? 'Alerts ON' : 'Enable Alerts'}</span>
+                    </button>
+
+                    <button className="btn-logout-patient" onClick={handleLogout}>
+                        <LogOut size={20} />
+                        <span>Logout</span>
                     </button>
                 </div>
-            )}
+            </div>
+
 
             {/* Main Content Area */}
             <div className="patient-content-column">

@@ -51,8 +51,8 @@ const PatientLinking = () => {
             delete dataToSubmit.custom_relationship;
 
             await api.post('users/caregiver/link-patient/', dataToSubmit);
-            // Redirect to dashboard with success state or message
-            navigate('/caregiver-dashboard', { state: { message: 'Patient linking request submitted. Awaiting admin approval.' } });
+            // Redirect to my-patients to track the request status
+            navigate('/caregiver/my-patients', { state: { message: 'Patient linking request submitted. Awaiting admin approval.' } });
         } catch (err) {
             const errorData = err.response?.data;
             let errorMessage = 'Failed to submit request. Please check patient details.';

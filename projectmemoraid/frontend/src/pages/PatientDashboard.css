@@ -10,10 +10,30 @@
     position: relative;
 }
 
-.btn-logout-patient {
+.btn-logout-patient:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #1e293b;
+}
+
+.patient-dashboard-header {
     position: absolute;
     top: 2rem;
+    left: 2rem;
     right: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+}
+
+.pd-header-right {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-notif-pill {
     background: white;
     border: 1px solid #e2e8f0;
     padding: 0.6rem 1.2rem;
@@ -27,43 +47,55 @@
     gap: 0.5rem;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-    z-index: 100;
 }
 
-.btn-logout-patient:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #1e293b;
+.btn-notif-pill:hover {
+    background: #f1f5f9;
+    transform: translateY(-1px);
 }
 
-.pd-notif-banner {
-    position: absolute;
-    top: 2rem;
-    right: 12rem;
-    z-index: 105;
+.btn-notif-pill.granted {
+    color: #10b981;
+    background: #f0fdf4;
+    border-color: #dcfce7;
 }
 
-.pd-notif-trigger-btn-new {
-    background: #eef2ff;
-    border: 1px solid #e0e7ff;
-    color: #4f46e5;
-    padding: 0.6rem 1.1rem;
+.btn-sos {
+    position: static;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 800;
     border-radius: 12px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 700;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.pd-notif-trigger-btn-new:hover {
-    background: #e0e7ff;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 15px rgba(79, 70, 229, 0.15);
+.btn-logout-patient {
+    position: static;
+    background: white;
+    border: 1px solid #e2e8f0;
+    padding: 0.6rem 1.2rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
+
 
 .btn-sos {
     position: absolute;
