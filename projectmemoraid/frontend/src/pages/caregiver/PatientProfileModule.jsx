@@ -30,12 +30,15 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
         emergency_contact_phone: '',
         emergency_contact_relation: '',
         consulting_doctor: '',
-        care_notes: ''
+        care_notes: '',
+        phone_number: ''
     });
     const [anchors, setAnchors] = useState(patient.patient_profile?.identity_anchors || []);
     const [newAnchor, setNewAnchor] = useState('');
     const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState('');
+    const [profileMessage, setProfileMessage] = useState('');
+    const [anchorMessage, setAnchorMessage] = useState('');
+    const [notesMessage, setNotesMessage] = useState('');
     const [galleryMessage, setGalleryMessage] = useState('');
     const [uploading, setUploading] = useState(false);
 
@@ -111,13 +114,19 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
         }
     };
 
-    const handleSave = async (customMessage = 'Profile updated successfully.') => {
+    const handleSave = async (section = 'profile') => {
         if (!canEdit) return;
         setLoading(true);
-        setMessage('');
 
-        // Ensure customMessage is a string (avoid React event objects)
-        const displayMessage = typeof customMessage === 'string' ? customMessage : 'Profile updated successfully.';
+        // Reset only the relevant message
+        if (section === 'profile') setProfileMessage('');
+        else if (section === 'anchors') setAnchorMessage('');
+        else if (section === 'notes') setNotesMessage('');
+
+        const displayMessage = section === 'anchors' ? 'Identity anchors saved successfully!' :
+            section === 'notes' ? 'Notes updated successfully.' :
+                'Profile updated successfully.';
+
         try {
             const payload = {
                 familiar_name: profile.familiar_name,
@@ -130,31 +139,33 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                 consulting_doctor_hospital: profile.consulting_doctor_hospital,
                 consulting_doctor_contact: profile.consulting_doctor_contact,
                 care_notes: profile.care_notes,
+                phone_number: profile.phone_number,
                 identity_anchors: anchors
             };
 
-
-            console.log('=== SAVE DEBUG ===');
-            console.log('Anchors being saved:', anchors);
-            console.log('Full payload:', payload);
-            console.log('Patient ID:', patient.id);
-
-            // Assuming we have a dedicated endpoint or we update via onboarding logic
-            const response = await api.patch(`users/onboarding/`, {
+            await api.patch(`users/onboarding/`, {
                 patient_profile: payload,
                 target_patient_id: patient.id
             });
 
-            console.log('Save response:', response.data);
-            console.log('Anchors in response:', response.data?.patient_profile?.identity_anchors);
+            if (section === 'profile') {
+                setProfileMessage(displayMessage);
+                setTimeout(() => setProfileMessage(''), 3000);
+            } else if (section === 'anchors') {
+                setAnchorMessage(displayMessage);
+                setTimeout(() => setAnchorMessage(''), 3000);
+            } else if (section === 'notes') {
+                setNotesMessage(displayMessage);
+                setTimeout(() => setNotesMessage(''), 3000);
+            }
 
-            setMessage(displayMessage);
             if (onRefresh) onRefresh();
-            setTimeout(() => setMessage(''), 3000);
         } catch (err) {
             console.error(err);
-
-            setMessage('Failed to update profile.');
+            const errorMsg = 'Failed to update profile.';
+            if (section === 'profile') setProfileMessage(errorMsg);
+            else if (section === 'anchors') setAnchorMessage(errorMsg);
+            else if (section === 'notes') setNotesMessage(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -171,8 +182,8 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                 </div>
                 {canEdit && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        {message && <span style={{ fontSize: '0.85rem', color: (typeof message === 'string' && message.includes('success')) ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
-                        <button className="btn-auth" style={{ width: 'auto', padding: '0.6rem 2rem' }} onClick={() => handleSave()} disabled={loading}>
+                        {profileMessage && <span style={{ fontSize: '0.85rem', color: profileMessage.includes('success') ? '#10b981' : '#ef4444', fontWeight: '700' }}>{profileMessage}</span>}
+                        <button className="btn-auth" style={{ width: 'auto', padding: '0.6rem 2rem' }} onClick={() => handleSave('profile')} disabled={loading}>
                             <Save size={18} /> {loading ? 'Saving...' : 'Save Changes'}
                         </button>
                     </div>
@@ -252,6 +263,27 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                             disabled={!canEdit}
                             placeholder="e.g. Grandma Betty"
                             className="form-input-styled"
+                        />
+                    </div>
+                    <div className="inspect-item">
+                        <label>Patient Contact Number</label>
+                        <input
+                            type="text"
+                            value={profile.phone_number || ''}
+                            onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
+                            disabled={!canEdit}
+                            placeholder="e.g. +1 234 567 890"
+                            className="form-input-styled"
+                        />
+                    </div>
+                    <div className="inspect-item">
+                        <label>Patient Email Address</label>
+                        <input
+                            type="text"
+                            value={patient.email || ''}
+                            disabled
+                            className="form-input-styled"
+                            style={{ background: '#f8fafc' }}
                         />
                     </div>
                     <div className="inspect-item">
@@ -365,11 +397,11 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                     </div>
                     {canEdit && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            {message && <span style={{ fontSize: '0.85rem', color: (typeof message === 'string' && message.includes('success')) ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
+                            {anchorMessage && <span style={{ fontSize: '0.85rem', color: anchorMessage.includes('success') ? '#10b981' : '#ef4444', fontWeight: '700' }}>{anchorMessage}</span>}
                             <button
                                 className="btn-auth"
                                 style={{ width: 'auto', padding: '0.6rem 1.5rem' }}
-                                onClick={() => handleSave('Identity anchors saved successfully!')}
+                                onClick={() => handleSave('anchors')}
                                 disabled={loading}
                             >
                                 <Save size={18} /> {loading ? 'Saving...' : 'Save Anchors'}
@@ -524,11 +556,11 @@ const PatientProfileModule = ({ patient, onRefresh }) => {
                     />
                     {canEdit && (
                         <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem' }}>
-                            {message && <span style={{ fontSize: '0.85rem', color: (typeof message === 'string' && message.includes('success')) ? '#10b981' : '#ef4444', fontWeight: '700' }}>{message}</span>}
+                            {notesMessage && <span style={{ fontSize: '0.85rem', color: notesMessage.includes('success') ? '#10b981' : '#ef4444', fontWeight: '700' }}>{notesMessage}</span>}
                             <button
                                 className="btn-auth"
                                 style={{ width: 'auto', padding: '0.6rem 2rem' }}
-                                onClick={() => handleSave('Notes updated successfully.')}
+                                onClick={() => handleSave('notes')}
                                 disabled={loading}
                             >
                                 <Save size={18} /> {loading ? 'Saving Notes...' : 'Save Notes'}

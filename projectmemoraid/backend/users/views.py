@@ -259,7 +259,7 @@ class AdminPendingApprovalsView(generics.ListAPIView):
         if request.user.role != 'admin':
             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
             
-        links = PatientCaregiver.objects.filter(approval_status='pending')
+        links = PatientCaregiver.objects.filter(approval_status__in=['pending', 'revoked'])
         data = []
         for link in links:
             rel = link.relationship
@@ -317,14 +317,14 @@ class AdminApproveLinkView(generics.GenericAPIView):
                 link.save()
                 return Response({"message": "Link rejected"})
             elif action == 'revoke':
-                # Reset link back to pending status
+                # Set link to revoked status
                 link.is_approved = False
-                link.approval_status = 'pending'
-                link.approved_by = None
-                link.approved_at = None
-                link.rejection_reason = None
+                link.approval_status = 'revoked'
+                link.approved_by = request.user
+                link.approved_at = timezone.now()
+                link.rejection_reason = "Revoked by Administrator"
                 link.save()
-                return Response({"message": "Link revoked and returned to pending queue"})
+                return Response({"message": "Link revoked successfully"})
                 
             return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
         except PatientCaregiver.DoesNotExist:
@@ -339,7 +339,7 @@ class AdminApprovalHistoryView(generics.ListAPIView):
         
         # Get all approved or rejected links
         processed_links = PatientCaregiver.objects.filter(
-            approval_status__in=['approved', 'rejected']
+            approval_status__in=['approved', 'rejected', 'revoked']
         ).order_by('-approved_at')
         
         data = []
@@ -1117,6 +1117,8 @@ class CaregiverDashboardStatsView(generics.GenericAPIView):
             pending_tasks = 0
             completed_tasks = 0
             missed_tasks = 0
+            escalated_tasks = 0
+            total_tasks = 0
             next_task = "Pending Approval"
             next_task_time = "--:--"
             next_task_id = None
@@ -1225,6 +1227,7 @@ class CaregiverDashboardStatsView(generics.GenericAPIView):
                     p_status = 'normal'
             p_data = {
                 "id": patient.id,
+                "link_id": link.id,
                 "full_name": patient.full_name,
                 "status": p_status,
                 "active_alerts": active_alerts,
@@ -1291,6 +1294,15 @@ class PatientLinkingView(generics.CreateAPIView):
         if self.request.user.role != 'caregiver':
             raise PermissionDenied("Only caregivers can initiate patient linking.")
         serializer.save()
+
+class CancelPatientLinkView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = PatientCaregiver.objects.all()
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        # Caregivers can only cancel their own pending or rejected requests
+        return self.queryset.filter(caregiver=self.request.user, is_approved=False)
 
 class CareNetworkView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]

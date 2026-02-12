@@ -13,10 +13,13 @@ import {
     AlertTriangle,
     Clock,
     Zap,
-    ShieldAlert
+    ShieldAlert,
+    Trash2,
+    RotateCcw
 } from 'lucide-react';
 import api from '../../services/api';
 import CaregiverLayout from '../../components/CaregiverLayout';
+import ConfirmModal from '../../components/ConfirmModal';
 import { getUser } from '../../utils/auth';
 
 const MyPatients = () => {
@@ -26,6 +29,12 @@ const MyPatients = () => {
         is_primary: false
     });
     const [loading, setLoading] = useState(true);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     useEffect(() => {
         fetchPatients();
@@ -49,6 +58,24 @@ const MyPatients = () => {
             case 'pending': return { label: 'Pending Approval', color: '#64748b', bg: '#f8fafc', icon: <Clock size={14} /> };
             default: return { label: 'Stable', color: '#10b981', bg: '#f0fdf4', icon: <CheckCircle size={14} /> };
         }
+    };
+
+    const handleCancelRequest = (linkId, patientName) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Cancel Request?',
+            message: `Are you sure you want to cancel the connection request for ${patientName}? This action cannot be undone.`,
+            confirmText: 'Cancel Request',
+            onConfirm: async () => {
+                try {
+                    await api.delete(`users/caregiver/link-patient/${linkId}/cancel/`);
+                    fetchPatients();
+                } catch (err) {
+                    console.error('Error cancelling request:', err);
+                    alert('Failed to cancel request. Please try again.');
+                }
+            }
+        });
     };
 
     return (
@@ -195,7 +222,7 @@ const MyPatients = () => {
                             <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a' }}>My Requests</h3>
                         </div>
 
-                        {data.patients.filter(p => p.status === 'pending' || p.status === 'rejected').length === 0 ? (
+                        {data.patients.filter(p => p.status === 'pending' || p.status === 'rejected' || p.status === 'revoked').length === 0 ? (
                             <div className="cg-empty-state" style={{ padding: '3rem', background: '#f8fafc', border: '1px dashed #cbd5e1' }}>
                                 <Clock size={40} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                                 <p style={{ color: '#94a3b8', maxWidth: '300px', margin: '0 auto' }}>
@@ -204,7 +231,7 @@ const MyPatients = () => {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                {data.patients.filter(p => p.status === 'pending' || p.status === 'rejected').map((request) => (
+                                {data.patients.filter(p => p.status === 'pending' || p.status === 'rejected' || p.status === 'revoked').map((request) => (
                                     <div
                                         key={request.id}
                                         className="cg-patient-card pending"
@@ -213,7 +240,7 @@ const MyPatients = () => {
                                             flexDirection: 'column',
                                             gap: '1.75rem',
                                             padding: '2.5rem',
-                                            borderLeft: `6px solid ${request.status === 'rejected' ? '#ef4444' : '#f59e0b'}`,
+                                            borderLeft: `6px solid ${request.status === 'rejected' || request.status === 'revoked' ? '#ef4444' : '#f59e0b'}`,
                                             background: '#fff',
                                             width: '100%'
                                         }}
@@ -240,23 +267,27 @@ const MyPatients = () => {
                                             </div>
                                             <div style={{
                                                 padding: '8px 20px',
-                                                background: request.status === 'rejected' ? '#fef2f2' : '#fff7ed',
+                                                background: request.status === 'rejected' || request.status === 'revoked' ? '#fef2f2' : '#fff7ed',
                                                 borderRadius: '24px',
                                                 fontSize: '0.85rem',
                                                 fontWeight: '900',
-                                                border: request.status === 'rejected' ? '1px solid #fee2e2' : '1px solid #ffedd5',
-                                                color: request.status === 'rejected' ? '#dc2626' : '#ea580c',
+                                                border: request.status === 'rejected' || request.status === 'revoked' ? '1px solid #fee2e2' : '1px solid #ffedd5',
+                                                color: request.status === 'rejected' || request.status === 'revoked' ? '#dc2626' : '#ea580c',
                                                 letterSpacing: '0.05em'
                                             }}>
-                                                {request.status === 'rejected' ? 'REJECTED BY ADMIN' : 'UNDER REVIEW BY ADMIN'}
+                                                {request.status === 'rejected' ? 'REJECTED BY ADMIN' :
+                                                    request.status === 'revoked' ? 'REVOKED BY ADMIN' :
+                                                        'UNDER REVIEW BY ADMIN'}
                                             </div>
                                         </div>
 
-                                        {request.status === 'rejected' && request.rejection_reason && (
+                                        {(request.status === 'rejected' || request.status === 'revoked') && (request.rejection_reason || request.status === 'revoked') && (
                                             <div style={{ background: '#fef2f2', padding: '1.25rem', borderRadius: '16px', border: '1px solid #fee2e2', marginTop: '-0.75rem' }}>
                                                 <p style={{ margin: 0, fontSize: '0.95rem', color: '#991b1b', lineHeight: '1.5' }}>
-                                                    <strong style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Rejection Reason</strong>
-                                                    {request.rejection_reason}
+                                                    <strong style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>
+                                                        {request.status === 'revoked' ? 'Revocation Reason' : 'Rejection Reason'}
+                                                    </strong>
+                                                    {request.rejection_reason || (request.status === 'revoked' ? 'The admin has revoked your access to this patient record.' : 'No reason provided.')}
                                                 </p>
                                             </div>
                                         )}
@@ -291,8 +322,39 @@ const MyPatients = () => {
                                                 </div>
                                             </div>
                                             <div style={{ color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic', maxWidth: '300px', textAlign: 'right' }}>
-                                                Security check in progress. You will be notified once access is granted.
+                                                {request.status === 'rejected' ? 'This request was not approved.' :
+                                                    request.status === 'revoked' ? 'Your access has been revoked.' :
+                                                        'Security check in progress. You will be notified once access is granted.'}
                                             </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                            {request.status === 'rejected' || request.status === 'revoked' ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleCancelRequest(request.link_id, request.full_name)}
+                                                        className="btn-auth"
+                                                        style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, justifyContent: 'center', height: 'auto', padding: '0.8rem' }}
+                                                    >
+                                                        <Trash2 size={16} /> Remove Record
+                                                    </button>
+                                                    <Link
+                                                        to="/caregiver/link-patient"
+                                                        className="btn-auth"
+                                                        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 2, justifyContent: 'center', height: 'auto', padding: '0.8rem' }}
+                                                    >
+                                                        <RotateCcw size={16} /> {request.status === 'revoked' ? 'Re-link Request' : 'Re-link Patient'}
+                                                    </Link>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleCancelRequest(request.link_id, request.full_name)}
+                                                    className="btn-auth"
+                                                    style={{ background: '#fff', color: '#ef4444', border: '1.5px solid #fee2e2', display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', padding: '0.8rem 1.5rem', fontWeight: '700' }}
+                                                >
+                                                    <Trash2 size={16} /> Cancel Request
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -301,6 +363,15 @@ const MyPatients = () => {
                     </div>
                 </>
             )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+            />
         </CaregiverLayout>
     );
 };

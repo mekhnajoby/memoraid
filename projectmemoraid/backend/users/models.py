@@ -175,6 +175,7 @@ class PatientCaregiver(models.Model):
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
+        ('revoked', 'Revoked'),
     )
     patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='caregiver_links', limit_choices_to={'role': 'patient'})
     caregiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='patient_links', limit_choices_to={'role': 'caregiver'})
@@ -250,7 +251,7 @@ class PasswordResetToken(models.Model):
 
 class FCMToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fcm_tokens')
-    token = models.TextField()
+    token = models.CharField(max_length=512)
     device_id = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

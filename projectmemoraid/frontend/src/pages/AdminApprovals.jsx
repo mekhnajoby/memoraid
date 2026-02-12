@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import AdminLayout from '../components/AdminLayout';
+import ConfirmModal from '../components/ConfirmModal';
 
 const AdminApprovals = () => {
     const [approvals, setApprovals] = useState([]);
@@ -9,6 +10,12 @@ const AdminApprovals = () => {
     const [selectedReq, setSelectedReq] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     useEffect(() => {
         fetchApprovals();
@@ -35,7 +42,20 @@ const AdminApprovals = () => {
         }
     };
 
-    const handleAction = async (id, action) => {
+    const handleAction = async (id, action, confirmed = false) => {
+        if (!confirmed && (action === 'revoke' || action === 'reject')) {
+            setConfirmModal({
+                isOpen: true,
+                title: action === 'revoke' ? 'Revoke Access?' : 'Reject Request?',
+                message: action === 'revoke'
+                    ? 'Are you sure you want to revoke this approved connection? The caregiver will lose all access immediately.'
+                    : 'Are you sure you want to reject this linking request?',
+                confirmText: action === 'revoke' ? 'Revoke Now' : 'Reject Request',
+                onConfirm: () => handleAction(id, action, true)
+            });
+            return;
+        }
+
         try {
             await api.post(`users/admin/approvals/${id}/`, { action });
             fetchApprovals(); // Refresh pending list
@@ -160,8 +180,14 @@ const AdminApprovals = () => {
                                                 <span
                                                     className={`status-badge status-${req.approval_status}`}
                                                     style={{
-                                                        background: req.approval_status === 'approved' ? '#f0fdf4' : '#fff1f2',
-                                                        color: req.approval_status === 'approved' ? '#16a34a' : '#be123c'
+                                                        background: req.approval_status === 'approved' ? '#f0fdf4' : req.approval_status === 'revoked' ? '#fffbeb' : '#fff1f2',
+                                                        color: req.approval_status === 'approved' ? '#16a34a' : req.approval_status === 'revoked' ? '#d97706' : '#be123c',
+                                                        textTransform: 'uppercase',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: 'bold',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '12px',
+                                                        border: `1px solid ${req.approval_status === 'approved' ? '#dcfce7' : req.approval_status === 'revoked' ? '#fef3c7' : '#ffe4e6'}`
                                                     }}
                                                 >
                                                     {req.approval_status}
@@ -343,6 +369,14 @@ const AdminApprovals = () => {
                 </div>
             )
             }
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+            />
         </AdminLayout >
     );
 };
