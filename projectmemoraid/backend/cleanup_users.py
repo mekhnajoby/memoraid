@@ -7,8 +7,8 @@ django.setup()
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-# Delete specific users or all users as requested
-users_to_delete = ['maryannjoby@gmail.com', 'achammakurian@gmail.com', 'mekhnajoby2005@gmail.com']
+# Delete specific users as requested
+users_to_delete = ['test_patient@example.com', 'test_caregiver@example.com']
 count, _ = User.objects.filter(email__in=users_to_delete).delete()
 print(f"Deleted {count} users.")
 
