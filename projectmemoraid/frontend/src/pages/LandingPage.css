@@ -33,6 +33,13 @@ body {
   border-bottom: 1px solid #f1f5f9;
 }
 
+.nav-logo-section {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem;
+}
+
 .logo-group {
   display: flex;
   align-items: center;
@@ -40,8 +47,8 @@ body {
 }
 
 .nav-logo {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
 }
 
 .nav-title {
@@ -52,12 +59,17 @@ body {
   margin: 0;
 }
 
+.logo-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-left: 0.75rem;
+}
+
 .nav-caption {
   font-size: 0.85rem;
   color: var(--text-muted);
-  border-left: 1px solid #e2e8f0;
-  padding-left: 1.5rem;
-  margin-left: 1.5rem;
+  font-weight: 500;
 }
 
 .nav-links {

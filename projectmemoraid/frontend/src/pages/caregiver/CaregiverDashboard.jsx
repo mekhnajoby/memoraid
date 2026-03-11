@@ -26,6 +26,7 @@ const CaregiverDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [successMessage, setSuccessMessage] = useState(location.state?.message || '');
+    const [errorMessage, setErrorMessage] = useState('');
     const [data, setData] = useState({
         patients: [],
         recent_alerts: [],
@@ -62,6 +63,7 @@ const CaregiverDashboard = () => {
             fetchDashboardData();
         } catch (err) {
             console.error('Failed to acknowledge alert:', err);
+            setErrorMessage('Could not update alert status. Please check your connection.');
         } finally {
             setAcknowledging(null);
         }
@@ -129,9 +131,29 @@ const CaregiverDashboard = () => {
                         </div>
                         <p style={{ margin: 0, color: '#065f46', fontWeight: '600' }}>{successMessage}</p>
                     </div>
+                </div>
+            )}
+
+            {errorMessage && (
+                <div style={{
+                    background: '#fef2f2',
+                    border: '1px solid #ef4444',
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    marginBottom: '2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: '#ef4444', color: '#fff', borderRadius: '50%', padding: '0.25rem', display: 'flex' }}>
+                            <AlertTriangle size={20} />
+                        </div>
+                        <p style={{ margin: 0, color: '#991b1b', fontWeight: '600' }}>{errorMessage}</p>
+                    </div>
                     <button
-                        onClick={() => setSuccessMessage('')}
-                        style={{ background: 'none', border: 'none', color: '#065f46', cursor: 'pointer', fontWeight: '800', fontSize: '1.2rem' }}
+                        onClick={() => setErrorMessage('')}
+                        style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: '800', fontSize: '1.2rem' }}
                     >
                         &times;
                     </button>
@@ -144,9 +166,9 @@ const CaregiverDashboard = () => {
                     onClick={async () => {
                         const permission = await Notification.requestPermission();
                         if (permission === 'granted') {
-                            window.location.reload();
+                            setSuccessMessage("Browser notifications are now enabled for the Memoraid platform.");
                         } else {
-                            alert("Notifications are blocked in your browser settings.");
+                            setErrorMessage("Notifications are blocked in your browser settings. Please enable them to receive system alerts.");
                         }
                     }}
                     className="btn-notification-trigger"

@@ -16,6 +16,7 @@ const AdminApprovals = () => {
         message: '',
         onConfirm: () => { }
     });
+    const [error, setError] = useState('');
 
     useEffect(() => {
         fetchApprovals();
@@ -61,7 +62,8 @@ const AdminApprovals = () => {
             fetchApprovals(); // Refresh pending list
             fetchHistory(); // Refresh history
         } catch (err) {
-            alert('Failed to process request');
+            setError('Failed to process request. Please try again.');
+            setTimeout(() => setError(''), 5000);
         }
     };
 
@@ -70,6 +72,20 @@ const AdminApprovals = () => {
             title="Pending Approvals"
             subtitle="Review and authorize connection requests between caregivers and patients."
         >
+            {error && (
+                <div style={{
+                    background: '#fef2f2',
+                    border: '1px solid #ef4444',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '1.5rem',
+                    color: '#991b1b',
+                    fontWeight: '600',
+                    textAlign: 'center'
+                }}>
+                    {error}
+                </div>
+            )}
             <div className="admin-module-container">
                 <h3>Access Request Queue</h3>
                 {loading ? (

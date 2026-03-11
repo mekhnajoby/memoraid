@@ -196,7 +196,11 @@ const PatientDashboard = () => {
                     msg = "Task update failed. Please try refreshing the page.";
                 }
             }
-            alert(msg);
+            setNotification({
+                title: "Task Update Error",
+                body: msg
+            });
+            setTimeout(() => setNotification(null), 5000);
         }
     };
 
@@ -223,7 +227,11 @@ const PatientDashboard = () => {
                 console.error('Failed to send SOS:', err);
                 setSosSending(false);
                 const errorMsg = err.response?.data?.error || err.message || "Connection error";
-                alert(`Could not send help request: ${errorMsg}. Please try calling your caregiver directly if possible.`);
+                setNotification({
+                    title: "SOS Error",
+                    body: `Could not send help request: ${errorMsg}. Please try calling your caregiver directly.`
+                });
+                setTimeout(() => setNotification(null), 10000);
             }
         };
 
@@ -271,19 +279,35 @@ const PatientDashboard = () => {
                         className={`btn-notif-pill ${notifPermission === 'granted' ? 'granted' : ''}`}
                         onClick={async () => {
                             if (!("Notification" in window)) {
-                                alert("This browser does not support desktop notifications");
+                                setNotification({
+                                    title: "Not Supported",
+                                    body: "This browser does not support desktop notifications."
+                                });
+                                setTimeout(() => setNotification(null), 5000);
                                 return;
                             }
                             if (notifPermission === 'granted') {
-                                alert("Notifications are already enabled!");
+                                setNotification({
+                                    title: "Already Enabled",
+                                    body: "Browser notifications are already active for Memoraid."
+                                });
+                                setTimeout(() => setNotification(null), 5000);
                                 return;
                             }
                             const permission = await Notification.requestPermission();
                             setNotifPermission(permission);
                             if (permission === 'granted') {
-                                window.location.reload();
+                                setNotification({
+                                    title: "Notifications Enabled",
+                                    body: "Browser notifications are now enabled for the Memoraid platform."
+                                });
+                                setTimeout(() => setNotification(null), 5000);
                             } else if (permission === 'denied') {
-                                alert("Notifications are blocked in browser settings.");
+                                setNotification({
+                                    title: "Action Required",
+                                    body: "Notifications are blocked. Please enable them in your browser to stay updated."
+                                });
+                                setTimeout(() => setNotification(null), 8000);
                             }
                         }}
                     >

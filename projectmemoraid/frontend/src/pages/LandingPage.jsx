@@ -31,11 +31,11 @@ const LandingPage = () => {
         <div className="landing-container">
             <nav className="navbar">
                 <div className="nav-logo-section">
-                    <div className="logo-group">
-                        <img src={logo} alt="Memoraid Logo" className="nav-logo" />
+                    <img src={logo} alt="Memoraid Logo" className="nav-logo" />
+                    <div className="logo-text-group">
                         <h1 className="nav-title">Memoraid</h1>
+                        <span className="nav-caption">Supporting care and memory, step by step</span>
                     </div>
-                    <span className="nav-caption">Supporting care and memory, step by step</span>
                 </div>
                 <div className={`nav-links ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
                     <a href="#about" className="nav-link" onClick={() => setIsMobileMenuOpen(false)}>About</a>

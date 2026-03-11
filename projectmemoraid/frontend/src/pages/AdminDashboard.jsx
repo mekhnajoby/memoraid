@@ -22,6 +22,8 @@ const AdminDashboard = () => {
         active_alerts: 0
     });
     const [loading, setLoading] = useState(true);
+    const [notificationSuccess, setNotificationSuccess] = useState(false);
+    const [notificationError, setNotificationError] = useState(false);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -100,9 +102,11 @@ const AdminDashboard = () => {
                     onClick={async () => {
                         const permission = await Notification.requestPermission();
                         if (permission === 'granted') {
-                            window.location.reload();
+                            setNotificationSuccess(true);
+                            setTimeout(() => setNotificationSuccess(false), 5000);
                         } else {
-                            alert("Notifications are blocked in your browser settings.");
+                            setNotificationError(true);
+                            setTimeout(() => setNotificationError(false), 5000);
                         }
                     }}
                     style={{
@@ -119,6 +123,36 @@ const AdminDashboard = () => {
                     Enable Browser Notifications
                 </button>
             </div>
+
+            {notificationSuccess && (
+                <div style={{
+                    background: '#ecfdf5',
+                    border: '1px solid #10b981',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '1.5rem',
+                    color: '#065f46',
+                    fontWeight: '600',
+                    textAlign: 'center'
+                }}>
+                    Browser notifications are now enabled for the Memoraid platform.
+                </div>
+            )}
+
+            {notificationError && (
+                <div style={{
+                    background: '#fef2f2',
+                    border: '1px solid #ef4444',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '1.5rem',
+                    color: '#991b1b',
+                    fontWeight: '600',
+                    textAlign: 'center'
+                }}>
+                    Notifications are blocked in your browser settings. Please enable them to receive system alerts.
+                </div>
+            )}
             <div className="admin-grid">
                 {cards.map((card, index) => (
                     <Link to={card.link} className="admin-card" key={index}>

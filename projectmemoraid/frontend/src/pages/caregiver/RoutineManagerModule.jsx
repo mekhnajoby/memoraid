@@ -108,7 +108,7 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
         alert_interval: 5,
         max_response_window: 30,
         escalation_enabled: true,
-        target_date: ''
+        target_date: null
     });
     const [editingRoutine, setEditingRoutine] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -147,27 +147,36 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
         if (!newRoutine.name.trim()) return setError('Routine name is required.');
         if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(newRoutine.time)) return setError('Invalid time format (HH:MM).');
 
-        // Time validation: prevent creating routines with past times for today
-        if (newRoutine.time && newRoutine.time.includes(':')) {
-            const now = new Date();
-            const [hours, minutes] = newRoutine.time.split(':').map(Number);
-            const scheduledTime = new Date();
-            scheduledTime.setHours(hours, minutes, 0, 0);
+        // Time validation: prevent creating routines with past times ONLY for 'once' frequency on current day
+        if (newRoutine.frequency === 'once' && newRoutine.target_date === new Date().toISOString().split('T')[0]) {
+            if (newRoutine.time && newRoutine.time.includes(':')) {
+                const now = new Date();
+                const [hours, minutes] = newRoutine.time.split(':').map(Number);
+                const scheduledTime = new Date();
+                scheduledTime.setHours(hours, minutes, 0, 0);
 
-            if (scheduledTime < now) {
-                return setError('Cannot create a routine with a past time. Please select a future time.');
+                if (scheduledTime < now) {
+                    return setError('Cannot create a one-time routine for today with a past time. Please select a future time.');
+                }
             }
         }
 
         try {
-            await api.post('users/caregiver/routines/', newRoutine);
+            const payload = { ...newRoutine };
+            if (!payload.target_date) payload.target_date = null;
+            if (payload.frequency !== 'weekly') payload.days_of_week = [];
+            if (payload.frequency !== 'once') payload.target_date = null;
+
+            await api.post('users/caregiver/routines/', payload);
             setShowAddModal(false);
             setNewRoutine({ name: '', time: '08:00', frequency: 'daily', days_of_week: [0, 1, 2, 3, 4, 5, 6], notes: '', icon: 'activity', patient: patient.id });
             fetchData();
             setDataVersion(v => v + 1);
             if (onRefresh) onRefresh();
         } catch (err) {
-            console.error(err);
+            console.error('Add Routine Error:', err);
+            const msg = err.response?.data ? (typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : err.response.data) : 'An unexpected error occurred while establishing the routine.';
+            setError(`Establish Routine Failed: ${msg}`);
         }
     };
 
@@ -177,14 +186,17 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
         const timeToValidate = editingRoutine.time.length > 5 ? editingRoutine.time.substring(0, 5) : editingRoutine.time;
         if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(timeToValidate)) return setError('Invalid time format (HH:MM).');
 
-        if (timeToValidate && timeToValidate.includes(':')) {
-            const now = new Date();
-            const [hours, minutes] = timeToValidate.split(':').map(Number);
-            const scheduledTime = new Date();
-            scheduledTime.setHours(hours, minutes, 0, 0);
+        // Time validation for editing
+        if (editingRoutine.frequency === 'once' && editingRoutine.target_date === new Date().toISOString().split('T')[0]) {
+            if (timeToValidate && timeToValidate.includes(':')) {
+                const now = new Date();
+                const [hours, minutes] = timeToValidate.split(':').map(Number);
+                const scheduledTime = new Date();
+                scheduledTime.setHours(hours, minutes, 0, 0);
 
-            if (scheduledTime < now) {
-                return setError('Cannot set a routine time in the past. Please select a future time.');
+                if (scheduledTime < now) {
+                    return setError('Cannot set a one-time routine for today in the past. Please select a future time.');
+                }
             }
         }
 
@@ -200,8 +212,11 @@ const RoutineManagerModule = ({ patient, onRefresh }) => {
                 is_active: editingRoutine.is_active ?? true,
                 alert_interval: editingRoutine.alert_interval,
                 max_response_window: editingRoutine.max_response_window,
-                escalation_enabled: editingRoutine.escalation_enabled
+                escalation_enabled: editingRoutine.escalation_enabled,
+                target_date: editingRoutine.target_date || null
             };
+            if (payload.frequency !== 'weekly') payload.days_of_week = [];
+            if (payload.frequency !== 'once') payload.target_date = null;
             await api.patch(`users/caregiver/routines/${editingRoutine.id}/`, payload);
             setShowEditModal(false);
             setEditingRoutine(null);

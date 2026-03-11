@@ -11,6 +11,7 @@ const AdminUserManagement = () => {
         status: 'all',
         level: 'all'
     });
+    const [error, setError] = useState('');
 
     useEffect(() => {
         fetchUsers();
@@ -39,7 +40,8 @@ const AdminUserManagement = () => {
             }
             fetchUsers();
         } catch (err) {
-            alert('Failed to update user status');
+            setError('Failed to update user status');
+            setTimeout(() => setError(''), 5000);
         }
     };
 
@@ -55,6 +57,20 @@ const AdminUserManagement = () => {
             title="User Management"
             subtitle="Manage system accounts and enforce access integrity."
         >
+            {error && (
+                <div style={{
+                    background: '#fef2f2',
+                    border: '1px solid #ef4444',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    marginBottom: '1.5rem',
+                    color: '#991b1b',
+                    fontWeight: '600',
+                    textAlign: 'center'
+                }}>
+                    {error}
+                </div>
+            )}
             <div className="admin-module-container">
                 <div className="admin-module-header">
                     <div>
